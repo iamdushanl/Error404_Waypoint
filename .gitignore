@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.expo/
+.expo-shared/
+
+# TypeScript/Vite caches
+*.tsbuildinfo
+.vite/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs and local tooling
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Native build artifacts
+android/.gradle/
+android/app/build/
+android/build/
+ios/Pods/
+ios/build/

@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker-data/
+
+# ── Competition datasets ──────────────────────────────────────────────────────
+# Per Tech-Triathlon 2026 Data Terms & Conditions:
+# "Do not share, distribute, or transmit the datasets to any third party."
+# Place CSVs in data/ locally before running seed scripts.
+data/*.csv
+data/*.json
+!data/.gitkeep
+data/
+
+# ── Python backend ────────────────────────────────────────────────────────────
+backend/api/.venv/
+backend/api/__pycache__/
+backend/api/**/__pycache__/
+backend/api/.pytest_cache/
+backend/api/**/*.pyc
+backend/api/**/*.pyo
+
+# ── Supabase local ────────────────────────────────────────────────────────────
+.supabase/
+supabase/.temp/

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SwipeToAction } from './components/SwipeToAction';
 
 type Role = 'Store Manager' | 'Dispatcher' | 'Loader';
 type Screen = 'Orders' | 'Confirmed' | 'Deferral' | 'Receipt' | 'Queue' | 'Allocate' | 'Board' | 'Capacity' | 'Load list' | 'Shortfall' | 'Plan changed';
@@ -6,7 +7,81 @@ const items = [{ name: 'Anchor Full Cream Milk 1L', sku: 'FRESH-MLK-001', price:
 const stops = ['Highland Mart — Kandy', 'Green Valley Store — Peradeniya', 'Midlands Supermart — Gampola', 'North Central Mart — Kurunegala'];
 const roleScreens: Record<Role, Screen[]> = { 'Store Manager': ['Orders', 'Confirmed', 'Deferral', 'Receipt'], Dispatcher: ['Queue', 'Allocate', 'Board', 'Capacity'], Loader: ['Load list', 'Shortfall', 'Plan changed'] };
 
-function Auth({ onSignIn }: { onSignIn: (role: Role) => void }) { const [role, setRole] = useState<Role>('Dispatcher'); const [contact, setContact] = useState(''); return <main className="auth"><div className="auth-art"><div className="brand-mark">W</div><p className="eyebrow">WAYPOINT FRESH</p><h1>Move the morning<br /><em>with confidence.</em></h1><p className="muted light">One operational rhythm from outlet order to confirmed receipt.</p><div className="route-art"><span>DC</span><i /><span>01</span><i /><span>02</span><i /><span>03</span></div></div><section className="auth-card"><p className="eyebrow">CONTROL TOWER</p><h2>Sign in without a password</h2><p className="muted">Use a one-time code or continue with Google.</p><button className="google" onClick={() => onSignIn(role)}><b>G</b> Continue with Google</button><div className="or"><span>or</span></div><label>Email or phone<input value={contact} onChange={e => setContact(e.target.value)} placeholder="you@company.com" /></label><label>Preview role<select value={role} onChange={e => setRole(e.target.value as Role)}>{Object.keys(roleScreens).map(r => <option key={r}>{r}</option>)}</select></label><button className="primary full" disabled={!contact} onClick={() => onSignIn(role)}>Send one-time code <span>→</span></button><small className="muted">Backend-ready boundary: replace this preview action with Supabase passwordless auth.</small></section></main> }
+const LOADER_PIN = '1234';
+
+function LoaderPinScreen({ onSuccess, onBack }: { onSuccess: () => void; onBack: () => void }) {
+  const [pin, setPin] = useState('');
+  const [shake, setShake] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleKey = (k: string) => {
+    if (pin.length >= 4) return;
+    const next = pin + k;
+    setPin(next);
+    setError('');
+    if (next.length === 4) {
+      if (next === LOADER_PIN) {
+        onSuccess();
+      } else {
+        setShake(true);
+        setError('Incorrect PIN. Try again.');
+        setTimeout(() => { setPin(''); setShake(false); }, 600);
+      }
+    }
+  };
+
+  const handleDelete = () => { setPin(p => p.slice(0, -1)); setError(''); };
+
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+
+  return (
+    <main className="auth">
+      <div className="auth-art">
+        <div className="brand-mark">W</div>
+        <p className="eyebrow">WAYPOINT FRESH</p>
+        <h1>Loader<br /><em>access only.</em></h1>
+        <p className="muted light">Enter your 4-digit PIN to access the loader dashboard.</p>
+        <div className="route-art"><span>DC</span><i /><span>01</span><i /><span>02</span><i /><span>03</span></div>
+      </div>
+      <section className="auth-card">
+        <button className="pin-back" onClick={onBack}>← Back</button>
+        <p className="eyebrow">LOADER VERIFICATION</p>
+        <h2>Enter your PIN</h2>
+        <p className="muted">Demo PIN is <strong>1234</strong></p>
+        <div className={`pin-dots ${shake ? 'pin-shake' : ''}`}>
+          {[0,1,2,3].map(i => <div key={i} className={`pin-dot ${pin.length > i ? 'filled' : ''}`} />)}
+        </div>
+        {error && <p className="pin-error">{error}</p>}
+        <div className="pin-pad">
+          {keys.map((k, i) => k === '' ? <div key={i} /> : (
+            <button
+              key={i}
+              className={`pin-key ${k === '⌫' ? 'pin-del' : ''}`}
+              onClick={() => k === '⌫' ? handleDelete() : handleKey(k)}
+              disabled={k !== '⌫' && pin.length >= 4}
+            >{k}</button>
+          ))}
+        </div>
+        <small className="muted">Backend-ready boundary: replace LOADER_PIN with a server-side PIN verification.</small>
+      </section>
+    </main>
+  );
+}
+
+function Auth({ onSignIn }: { onSignIn: (role: Role) => void }) {
+  const [role, setRole] = useState<Role>('Dispatcher');
+  const [contact, setContact] = useState('');
+  const [showPin, setShowPin] = useState(false);
+
+  const handleSignIn = () => {
+    if (role === 'Loader') { setShowPin(true); }
+    else { onSignIn(role); }
+  };
+
+  if (showPin) return <LoaderPinScreen onSuccess={() => onSignIn('Loader')} onBack={() => setShowPin(false)} />;
+
+  return <main className="auth"><div className="auth-art"><div className="brand-mark">W</div><p className="eyebrow">WAYPOINT FRESH</p><h1>Move the morning<br /><em>with confidence.</em></h1><p className="muted light">One operational rhythm from outlet order to confirmed receipt.</p><div className="route-art"><span>DC</span><i /><span>01</span><i /><span>02</span><i /><span>03</span></div></div><section className="auth-card"><p className="eyebrow">CONTROL TOWER</p><h2>Sign in without a password</h2><p className="muted">Use a one-time code or continue with Google.</p><button className="google" onClick={handleSignIn}><b>G</b> Continue with Google</button><div className="or"><span>or</span></div><label>Email or phone<input value={contact} onChange={e => setContact(e.target.value)} placeholder="you@company.com" /></label><label>Preview role<select value={role} onChange={e => setRole(e.target.value as Role)}>{Object.keys(roleScreens).map(r => <option key={r}>{r}</option>)}</select></label><button className="primary full" disabled={!contact} onClick={handleSignIn}>Send one-time code <span>→</span></button><small className="muted">Backend-ready boundary: replace this preview action with Supabase passwordless auth.</small></section></main>;
+}
 
 function Shell({ role, onSignOut }: { role: Role; onSignOut: () => void }) { const [screen, setScreen] = useState<Screen>(roleScreens[role][0]); const [toast, setToast] = useState(''); const [qty, setQty] = useState(items.map(x => x.qty)); const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400); }; useEffect(() => setScreen(roleScreens[role][0]), [role]); return <div className="app-shell"><aside><div className="side-brand"><div className="brand-mark small">W</div><span>WAYPOINT</span></div><div className="workspace"><span className="dot" />Fresh network<strong>{role}</strong></div><nav>{roleScreens[role].map(item => <button className={item === screen ? 'active' : ''} key={item} onClick={() => setScreen(item)}><span className="nav-icon">{icon(item)}</span>{label(item)}</button>)}</nav><div className="side-bottom"><div className="network"><span className="dot" />All systems operational</div><button className="profile" onClick={onSignOut}><span className="avatar">{role[0]}</span><span><b>{role === 'Dispatcher' ? 'Perera, D.' : role}</b><small>Sign out</small></span><span>↗</span></button></div></aside><section className="main"><header><div><p className="eyebrow">{role.toUpperCase()} / TUESDAY 14 JANUARY 2026</p><h1>{title(screen)}</h1></div><div className="header-actions"><span className="live"><i />Live workspace</span><button className="icon-button" onClick={() => notify('Notifications are clear')}>♡</button></div></header><div className="content">{screenView(screen, qty, setQty, notify)}</div>{toast && <div className="toast">✓ {toast}</div>}</section></div> }
 function icon(s: Screen) { return ({ Orders: '＋', Confirmed: '✓', Deferral: '!', Receipt: '□', Queue: '≡', Allocate: '◈', Board: '◉', Capacity: '⌁', 'Load list': '▤', Shortfall: '△', 'Plan changed': '↻' } as Record<Screen, string>)[s]; }
@@ -24,7 +99,7 @@ function Queue() { const rows = [['Midlands Supermart — Gampola', 'Fresh', '16
 function Allocate({ notify }: { notify: (m: string) => void }) { return <><div className="banner warning">! Shoreline Store has been deferred two consecutive days · Find a compatible vehicle before publishing.</div><div className="split"><div><div className="section-head compact"><h2>Unassigned orders</h2><Status tone="red">4</Status></div>{['Shoreline Store — Galle Fort', 'Style Hub — One Galle Face', 'Digital World — Bambalapitiya', 'Fashion Point — Negombo'].map((x, i) => <Panel className="order-card" key={x}><div className="card-line"><b>{x}</b><Status tone={i === 0 ? 'amber' : 'green'}>{i === 0 ? '2nd deferral' : 'Pending'}</Status></div><p className="muted">{[310, 90, 260, 75][i]} kg · {['Chilled', 'Mall access', 'Ambient', 'Ambient'][i]}</p><div className="mini-actions"><button onClick={() => notify(`${x} assigned to WP-CAB-9241`)}>Serve</button><button onClick={() => notify(`${x} deferred to next run`)}>Defer</button></div></Panel>)}</div><div><div className="section-head compact"><h2>Vehicle capacity</h2><span className="muted">Drag orders to assign</span></div>{[['WP-CAB-9241', 'Rohan Silva', 71, 'Refrigerated'], ['WP-KV-3318', 'Perera, R.', 95, 'Van-class'], ['WP-NT-1102', 'Silva, M.', 32, 'Van-class']].map(v => <Panel className="vehicle-card" key={v[0]}><div className="card-line"><div><b className="mono">{v[0]}</b><small>{v[1]} · Kandy–Gampola corridor</small></div><Status>{v[3]}</Status></div><div className="capacity"><span>Weight <b>{Number(v[2])}%</b></span><i><em style={{ width: `${Number(v[2])}%` }} /></i></div><div className="capacity"><span>Volume <b>{Math.max(Number(v[2]) - 12, 18)}%</b></span><i><em style={{ width: `${Math.max(Number(v[2]) - 12, 18)}%` }} /></i></div></Panel>)}</div></div></> }
 function Board() { return <><div className="kpi-grid"><Kpi label="On route" value="3" sub="Moving to window" /><Kpi label="Delayed" value="1" sub="Intervention suggested" tone="amber" /><Kpi label="At risk" value="1" sub="Window may breach" tone="red" /><Kpi label="Offline" value="1" sub="Last seen 07:14 AM" tone="slate" /></div><Panel className="table-panel"><div className="table-head board-grid"><span>Vehicle</span><span>Driver & route</span><span>Current destination</span><span>Progress</span><span>Status</span></div>{[['WP-CAB-9241', 'Rohan Silva · Kandy–Gampola', 'Midlands Supermart — Gampola', '2 of 4 stops', 'Offline'], ['WP-KV-3318', 'Perera, R. · Southern Route', 'Shoreline Store — Galle Fort', '1 of 5 stops', 'Delayed'], ['WP-NT-1102', 'Silva, M. · North Western', 'Digital World — Kurunegala', '4 of 7 stops', 'On route'], ['WP-JF-4401', 'Fernando, A. · Western Suburbs', 'Fashion Point — Negombo', '0 of 4 stops', 'On route']].map(r => <div className={`table-row board-grid ${r[4] === 'Offline' ? 'offline-row' : ''}`} key={r[0]}><b className="mono">{r[0]}</b><span>{r[1]}</span><div><b>{r[2]}</b>{r[4] === 'Offline' && <small>Signal lost · Kandy corridor dead zone</small>}</div><span>{r[3]}</span><Status tone={r[4] === 'On route' ? 'green' : r[4] === 'Delayed' ? 'amber' : 'slate'}>{r[4]}</Status></div>)}</Panel></> }
 function Capacity() { return <><div className="section-head"><div><span className="overline">5-DAY FORWARD PLANNING</span><h2>Demand against available fleet</h2></div><button className="secondary">Export outlook</button></div><Panel><div className="capacity-list">{[['Wed 15 Jan', '22 orders · 4,200 kg', 'No gap', 'Low', 'green'], ['Thu 16 Jan', '28 orders · 5,800 kg', '800 kg shortage', 'Medium', 'amber'], ['Fri 17 Jan', '34 orders · 6,900 kg', '2,100 kg shortage', 'High', 'red'], ['Sat 18 Jan', '18 orders · 3,400 kg', 'No gap', 'Low', 'green']].map(r => <div className="forecast" key={r[0]}><b>{r[0]}</b><span>{r[1]}</span><strong className={r[4]}>{r[2]}</strong><Status tone={r[4]}>{r[3]}</Status></div>)}</div></Panel></> }
-function LoadList({ notify }: { notify: (m: string) => void }) { return <><div className="dark-banner"><div><span className="overline">VEHICLE · WP-CAB-9241 · PELIYAGODA DC</span><h2>Load in reverse-unload order</h2><p>Last delivery first, so the first stop is accessible when unloading.</p></div><Status tone="amber">Not ready · 1 shortfall</Status></div>{stops.slice().reverse().map((stop, i) => <Panel className={`stop-card ${i === 0 ? 'loaded' : i === 1 ? 'shortfall' : ''}`} key={stop}><div className="stop-number">{i === 0 ? '✓' : i === 1 ? '!' : i + 1}</div><div className="stop-copy"><div className="card-line"><div><b>{stop}</b><small>Load position {i + 1} · Delivery stop {4 - i}</small></div><Status tone="blue">Chilled</Status></div><p>{i === 1 ? 'Anchor Milk 1L × 12 · 6 units missing · WPF-2026-08741' : 'Anchor Milk 1L × 18 · Basmati Rice × 8 · Ginger Beer × 12'}</p>{i === 1 && <strong className="amber-text">Shortfall must be recorded before departure.</strong>}</div></Panel>)}<div className="action-row"><button className="secondary" onClick={() => notify('Shortfall screen opened')}>Flag shortfall</button><button className="primary" onClick={() => notify('Load list marked complete')}>Mark all loaded <span>→</span></button></div></> }
+function LoadList({ notify }: { notify: (m: string) => void }) { return <><div className="dark-banner"><div><span className="overline">VEHICLE · WP-CAB-9241 · PELIYAGODA DC</span><h2>Load in reverse-unload order</h2><p>Last delivery first, so the first stop is accessible when unloading.</p></div><Status tone="amber">Not ready · 1 shortfall</Status></div>{stops.slice().reverse().map((stop, i) => <SwipeToAction key={stop}><Panel className={`stop-card ${i === 0 ? 'loaded' : i === 1 ? 'shortfall' : ''}`}><div className="stop-number">{i === 0 ? '✓' : i === 1 ? '!' : i + 1}</div><div className="stop-copy"><div className="card-line"><div><b>{stop}</b><small>Load position {i + 1} · Delivery stop {4 - i}</small></div><Status tone="blue">Chilled</Status></div><p>{i === 1 ? 'Anchor Milk 1L × 12 · 6 units missing · WPF-2026-08741' : 'Anchor Milk 1L × 18 · Basmati Rice × 8 · Ginger Beer × 12'}</p>{i === 1 && <strong className="amber-text">Shortfall must be recorded before departure.</strong>}</div></Panel></SwipeToAction>)}<div className="action-row"><button className="secondary" onClick={() => notify('Shortfall screen opened')}>Flag shortfall</button><button className="primary" onClick={() => notify('Load list marked complete')}>Mark all loaded <span>→</span></button></div></> }
 function Shortfall({ notify }: { notify: (m: string) => void }) { return <div className="narrow"><div className="banner warning">Record the affected quantity before the vehicle leaves.</div><Panel><span className="overline">STEP 1 · ISSUE TYPE</span><div className="choice-grid"><button className="selected">▣<b>Missing</b><small>Stock not available</small></button><button>▧<b>Damaged</b><small>Cannot dispatch</small></button><button>△<b>Wrong item</b><small>Incorrect SKU</small></button></div></Panel><Panel><span className="overline">STEP 2 · AFFECTED ITEM</span><h3>Anchor Full Cream Milk 1L</h3><p className="muted">Expected 12 units · Received 6 units · Gampola stop</p><div className="quantity"><span>Units missing</span><button>−</button><b>6</b><button>+</button></div></Panel><Panel><span className="overline">EVIDENCE</span><div className="photo">⌾<span>Attach photo of empty crate / shelf</span></div><textarea placeholder="Notes (optional)" /></Panel><button className="primary full" onClick={() => notify('Shortfall WPF-2026-08741 recorded')}>Confirm shortfall · 6 missing</button></div> }
 function PlanChanged({ notify }: { notify: (m: string) => void }) { return <div className="narrow"><div className="critical-block"><Status tone="red">Plan changed</Status><h2>The load list has changed</h2><p>Dispatcher Perera added Midlands Supermart — Gampola before departure. Re-verify your load.</p></div><Panel><div className="meta-grid"><div><small>What</small><b>New stop added · Gampola</b></div><div><small>When</small><b>06:42 AM today</b></div><div><small>Who</small><b>Dispatcher Perera</b></div><div><small>Action</small><b>Load position 2</b></div></div></Panel><Panel className="highlight-panel"><Status tone="amber">New stop</Status><h3>Midlands Supermart — Gampola</h3><p>Anchor Milk × 12 · Maliban Crackers × 6 · Basmati × 4 · Ginger Beer × 8</p></Panel><button className="primary full" onClick={() => notify('Updated load list acknowledged')}>Acknowledge & continue</button></div> }
 export default function App() { const [role, setRole] = useState<Role | null>(() => localStorage.getItem('waypoint-role') as Role | null); const signIn = (next: Role) => { localStorage.setItem('waypoint-role', next); setRole(next); }; if (!role) return <Auth onSignIn={signIn} />; return <Shell role={role} onSignOut={() => { localStorage.removeItem('waypoint-role'); setRole(null); }} />; }

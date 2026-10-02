@@ -1,0 +1,64 @@
+version: '3.8'
+
+# ============================================================
+# Waypoint — Docker Compose
+#
+# Usage:
+#   docker compose up          → start all services
+#   docker compose up --build  → rebuild images first
+#   docker compose down        → stop and remove containers
+#
+# Required: copy .env.example → .env and fill in values before running.
+# ============================================================
+
+services:
+
+  # ── Backend API ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend/api
+      dockerfile: Dockerfile
+    container_name: waypoint-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=development
+    # Health check mirrors the Dockerfile HEALTHCHECK
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── Web Frontend ─────────────────────────────────────────────────────────
+  # Uncomment when the frontend team confirms their Dockerfile or build path.
+  # web:
+  #   build:
+  #     context: ./web          # or ./apps/web depending on final structure
+  #     dockerfile: Dockerfile
+  #   container_name: waypoint-web
+  #   ports:
+  #     - "5173:5173"
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
+  #   environment:
+  #     - VITE_API_URL=http://api:8000
+
+  # ── Seed runner (Phase 9) ─────────────────────────────────────────────────
+  # Runs once on startup to load competition datasets into Supabase.
+  # seed:
+  #   build:
+  #     context: ./scripts
+  #     dockerfile: Dockerfile.seed
+  #   container_name: waypoint-seed
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     api:
+  #       condition: service_healthy
+  #   restart: "no"

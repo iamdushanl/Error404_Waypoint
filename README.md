@@ -1,28 +1,59 @@
-# Waypoint Frontends
+# Error 404 - Waypoint
 
-Frontend-only implementation of the Waypoint Fresh delivery workflow.
+## Project Structure
+```text
+TeamName_SolutionName/
+│
+├── apps/
+│   ├── web/
+│   └── mobile/
+│
+├── backend/
+│   └── api/
+│
+├── supabase/
+│   ├── migrations/
+│   └── seed/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── data-model.md
+│   └── ai-disclosure.md
+│
+├── scripts/
+│
+├── docker-compose.yml
+├── .env.example
+├── .gitignore
+├── README.md
+└── LICENSE
+```
 
+## Frontend Apps
 - `web/`: role-aware web console for Store Manager, Dispatcher, and Loader.
 - `mobile/`: verified phone-first Driver browser preview.
 - `mobile-native/`: React Native / Expo Driver app entrypoint for Android and iOS.
 
-Both apps use seeded in-memory/localStorage state so the UI can be exercised without Supabase or FastAPI. Authentication is represented by a passwordless email/phone flow and Google sign-in action; replace the marked adapter boundary with Supabase Auth when the backend is ready.
+Both apps use seeded in-memory/localStorage state so the UI can be exercised without Supabase or FastAPI.
 
-## Repository boundary
+## Getting Started
 
-Commit and push this `codebase/` folder only. The sibling `screrns/` folder is the original Figma Make reference project and is not part of this implementation repository. Generated dependencies and build output are excluded by [.gitignore](.gitignore).
+### Prerequisites
+- Node.js (v18+)
+- Docker & Docker Compose
+- Supabase CLI
 
-## Run
+### Setup
+1. Clone the repository
+2. Copy `.env.example` to `.env` and fill in necessary secrets
+3. Start local services:
+   ```bash
+   docker-compose up -d
+   ```
 
+### Run Frontends
 ```bash
 cd web && npm install && npm run dev
 cd mobile && npm install && npm run dev
-```
-
-For the native driver app:
-
-```bash
 cd mobile-native && npm install && npx expo start
 ```
-
-Build the verified web and mobile browser targets from this directory with `npm run build`. Backend integration guidance is in [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md).

@@ -29,6 +29,13 @@ TeamName_SolutionName/
 └── LICENSE
 ```
 
+## Frontend Apps
+- `web/`: role-aware web console for Store Manager, Dispatcher, and Loader.
+- `mobile/`: verified phone-first Driver browser preview.
+- `mobile-native/`: React Native / Expo Driver app entrypoint for Android and iOS.
+
+Both apps use seeded in-memory/localStorage state so the UI can be exercised without Supabase or FastAPI.
+
 ## Getting Started
 
 ### Prerequisites
@@ -43,3 +50,10 @@ TeamName_SolutionName/
    ```bash
    docker-compose up -d
    ```
+
+### Run Frontends
+```bash
+cd web && npm install && npm run dev
+cd mobile && npm install && npm run dev
+cd mobile-native && npm install && npx expo start
+```

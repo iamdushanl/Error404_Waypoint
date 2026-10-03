@@ -1,0 +1,12 @@
+{
+  "name": "waypoint-frontends",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:web && npm run build:mobile",
+    "build:web": "npm --prefix web run build",
+    "build:mobile": "npm --prefix mobile run build",
+    "dev:web": "npm --prefix web run dev",
+    "dev:mobile": "npm --prefix mobile run dev",
+    "dev:native": "npm --prefix mobile-native run start"
+  }
+}

@@ -219,7 +219,7 @@ async def confirm_plan(
         db.table("delivery_plans")
         .update({
             "status": "confirmed",
-            "confirmed_at": datetime.datetime.utcnow().isoformat(),
+            "confirmed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         })
         .eq("id", plan_id)
         .execute()
@@ -227,3 +227,4 @@ async def confirm_plan(
 
     log.info("Plan %s confirmed by %s", plan_id, current_user["email"])
     return updated.data[0]
+

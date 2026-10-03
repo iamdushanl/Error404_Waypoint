@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Waypoint Driver",
+    "slug": "waypoint-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": { "package": "com.waypoint.driver" },
+    "ios": { "bundleIdentifier": "com.waypoint.driver" }
+  }
+}

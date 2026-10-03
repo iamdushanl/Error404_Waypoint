@@ -20,7 +20,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pythonjsonlogger import jsonlogger
 
-from app.api.routes import auth, deliveries, health, orders, outlets, planning, trips, vehicles
+from app.api.routes import auth, deliveries, health, orders, outlets, planning, sync, trips, vehicles
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 
@@ -104,7 +104,7 @@ def create_app() -> FastAPI:
     app.include_router(trips.router)     # GET/PATCH /api/v1/trips       Phase 4 ✅
     app.include_router(planning.router)  # POST/GET  /api/v1/planning   Phase 5 ✅
     app.include_router(deliveries.router) # POST/GET  /api/v1/deliveries Phase 6 ✅
-    # Phase 7: sync router      → /api/v1/sync
+    app.include_router(sync.router)       # POST/GET  /api/v1/sync       Phase 7 ✅
 
     logger.info("Waypoint API ready", extra={"docs": "/docs"})
     return app

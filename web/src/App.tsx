@@ -359,10 +359,43 @@ function ReportIssueModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
     }
   };
 
-  const handleSubmit = () => {
-    // TODO: Replace local console.log with Supabase Storage upload for the image and database insert for the issue record.
-    console.log("Issue Reported Payload:", { issueType, notes, photo });
-    onSubmit({ issueType, notes, photo });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      let finalPhotoUrl = null;
+      if (photo) {
+        const fileExt = photo.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('evidence')
+          .upload(fileName, photo);
+          
+        if (uploadError) throw uploadError;
+        if (uploadData) {
+          const { data: publicUrlData } = supabase.storage.from('evidence').getPublicUrl(fileName);
+          finalPhotoUrl = publicUrlData.publicUrl;
+        }
+      }
+
+      // Hardcoded order_id for the demo matching the mockup
+      const { error: dbError } = await supabase.from('delivery_discrepancies').insert({
+        issue_type: issueType,
+        notes: notes,
+        photo_url: finalPhotoUrl,
+        order_id: '11111111-1111-1111-1111-111111111111' // You will replace this with real order ID later
+      });
+
+      if (dbError) throw dbError;
+      
+      onSubmit({ issueType, notes, photoUrl: finalPhotoUrl });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to report issue. Ensure the backend and migrations are set up.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -402,7 +435,7 @@ function ReportIssueModal({ onClose, onSubmit }: { onClose: () => void, onSubmit
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
           <button onClick={onClose} style={{ padding: '10px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#475569', fontSize: '14px' }}>Cancel</button>
-          <button onClick={handleSubmit} style={{ padding: '10px 16px', borderRadius: '6px', border: 'none', background: '#065F46', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: '14px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>Submit Issue & Confirm</button>
+          <button disabled={isSubmitting} onClick={handleSubmit} style={{ padding: '10px 16px', borderRadius: '6px', border: 'none', background: '#065F46', color: 'white', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '14px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', opacity: isSubmitting ? 0.7 : 1 }}>{isSubmitting ? 'Submitting...' : 'Submit Issue & Confirm'}</button>
         </div>
       </div>
     </div>

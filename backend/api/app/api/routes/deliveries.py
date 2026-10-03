@@ -62,32 +62,6 @@ def _delivery_repo() -> DeliveryRepository:
     return DeliveryRepository(get_supabase())
 
 
-@router.get(
-    "/outlets/{outlet_id}/deliveries",
-    response_model=list[DeliveryResponse],
-    summary="List deliveries for a store outlet",
-    description="Store managers may list delivery records for their assigned outlet; dispatchers may read any outlet.",
-)
-async def list_outlet_deliveries(
-    outlet_id: str,
-    current_user: dict[str, Any] = Depends(get_current_user),
-) -> list[DeliveryResponse]:
-    if current_user.get("role") == "store_manager" and current_user.get("outlet_id") != outlet_id:
-        raise HTTPException(status_code=404, detail="Outlet not found.")
-
-    db = get_supabase()
-    orders = db.table("orders").select("id").eq("outlet_id", outlet_id).execute().data or []
-    order_ids = [row["id"] for row in orders]
-    if not order_ids:
-        return []
-    stops = db.table("trip_stops").select("id").in_("order_id", order_ids).execute().data or []
-    stop_ids = [row["id"] for row in stops]
-    if not stop_ids:
-        return []
-    deliveries = db.table("deliveries").select("*").in_("trip_stop_id", stop_ids).order("created_at", desc=True).execute().data or []
-    return [DeliveryResponse(**delivery) for delivery in deliveries]
-
-
 # ── POST /api/v1/deliveries — driver records stop outcome ────────────────────
 
 @router.post(

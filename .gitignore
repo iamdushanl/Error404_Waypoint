@@ -25,11 +25,16 @@ __pycache__/
 *.env
 !.env.example
 phase8.md
+*phase8*.md
+*PHASE8*.md
 *.pem
 *.key
 *.p12
 credentials.json
 secrets.*
+*.secret
+*.token
+*.credentials
 
 # Logs
 logs
@@ -81,3 +86,9 @@ backend/api/**/*.pyo
 # ── Supabase local ────────────────────────────────────────────────────────────
 .supabase/
 supabase/.temp/
+
+# Local verification artifacts
+coverage/
+.coverage
+test-results/
+playwright-report/

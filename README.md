@@ -15,6 +15,8 @@ Error404 Waypoint is a four-role delivery operations system: Store Manager, Disp
 - `docs/`: architecture, data model, allocation rules, and AI disclosure.
 - `phase8.md`: local implementation instructions; ignored and intentionally not committed.
 
+See [SETUP.md](SETUP.md) for the complete Phase 8 setup, secret-handling rules, migration/seed steps, run commands, verification commands, and judge walkthrough.
+
 ## Prerequisites
 
 - Node.js 18+

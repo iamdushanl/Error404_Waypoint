@@ -20,7 +20,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pythonjsonlogger import jsonlogger
 
-from app.api.routes import auth, health
+from app.api.routes import auth, deliveries, health, orders, outlets, planning, trips, vehicles
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 
@@ -97,17 +97,14 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
 
     # /api/v1/... — all application routes live here
-    app.include_router(auth.router)   # GET /api/v1/auth/me  ← Phase 3 ✅
-
-    # Additional routers added per phase:
-    #   Phase 3: auth router    → /api/v1/auth/me
-    #   Phase 4: orders router  → /api/v1/orders
-    #   Phase 4: outlets router → /api/v1/outlets
-    #   Phase 4: vehicles router→ /api/v1/vehicles
-    #   Phase 5: planning router→ /api/v1/planning
-    #   Phase 6: trips router   → /api/v1/trips
-    #   Phase 6: deliveries     → /api/v1/deliveries
-    #   Phase 7: sync router    → /api/v1/sync
+    app.include_router(auth.router)      # GET /api/v1/auth/me          Phase 3 ✅
+    app.include_router(outlets.router)   # GET /api/v1/outlets           Phase 4 ✅
+    app.include_router(vehicles.router)  # GET /api/v1/vehicles          Phase 4 ✅
+    app.include_router(orders.router)    # POST/GET/PATCH /api/v1/orders Phase 4 ✅
+    app.include_router(trips.router)     # GET/PATCH /api/v1/trips       Phase 4 ✅
+    app.include_router(planning.router)  # POST/GET  /api/v1/planning   Phase 5 ✅
+    app.include_router(deliveries.router) # POST/GET  /api/v1/deliveries Phase 6 ✅
+    # Phase 7: sync router      → /api/v1/sync
 
     logger.info("Waypoint API ready", extra={"docs": "/docs"})
     return app

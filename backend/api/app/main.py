@@ -104,6 +104,10 @@ def create_app() -> FastAPI:
     #   Phase 4: orders router  → /api/v1/orders
     #   Phase 4: outlets router → /api/v1/outlets
     #   Phase 4: vehicles router→ /api/v1/vehicles
+    
+    from app.api.routes import planning
+    app.include_router(planning.router, prefix="/api/v1")
+    
     #   Phase 5: planning router→ /api/v1/planning
     #   Phase 6: trips router   → /api/v1/trips
     #   Phase 6: deliveries     → /api/v1/deliveries

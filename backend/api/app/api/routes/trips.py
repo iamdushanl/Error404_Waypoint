@@ -272,7 +272,7 @@ async def complete_trip(
     updated = repo.update_status(
         trip_id,
         "completed",
-        extra={"completed_at": datetime.datetime.utcnow().isoformat()},
+        extra={"completed_at": datetime.datetime.now(datetime.timezone.utc).isoformat()},
     )
     log.info("Trip %s completed by driver %s", trip_id, current_user["email"])
     return TripResponse(**updated)

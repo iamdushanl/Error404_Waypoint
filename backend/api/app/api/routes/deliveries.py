@@ -38,7 +38,7 @@ import datetime
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_supabase
@@ -80,6 +80,7 @@ def _delivery_repo() -> DeliveryRepository:
 )
 async def record_delivery(
     body: DeliveryCreate,
+    response: Response,
     current_user: dict[str, Any] = Depends(require_role("driver")),
 ) -> DeliveryResponse:
     db = get_supabase()
@@ -93,6 +94,7 @@ async def record_delivery(
                 "Duplicate offline sync — returning existing delivery",
                 extra={"operation_id": body.offline_operation_id},
             )
+            response.status_code = status.HTTP_200_OK
             return DeliveryResponse(**existing)
 
     # ── Duplicate stop check ──────────────────────────────────────────────────
@@ -110,7 +112,7 @@ async def record_delivery(
     # ── Verify the stop exists and belongs to the driver's trip ───────────────
     stop_resp = (
         db.table("trip_stops")
-        .select("id, trip_id, status, trips!inner(vehicle_id, status)")
+        .select("id, trip_id, order_id, status, trips!inner(vehicle_id, status)")
         .eq("id", body.trip_stop_id)
         .maybe_single()
         .execute()
@@ -132,6 +134,7 @@ async def record_delivery(
         )
 
     # ── Insert delivery ───────────────────────────────────────────────────────
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     payload = {
         "trip_stop_id": body.trip_stop_id,
         "driver_id": current_user["id"],
@@ -141,10 +144,10 @@ async def record_delivery(
         "delivered_at": (
             body.delivered_at.isoformat()
             if body.delivered_at
-            else datetime.datetime.utcnow().isoformat()
+            else now_iso
         ),
         "offline_operation_id": body.offline_operation_id,
-        "synced_at": datetime.datetime.utcnow().isoformat() if body.offline_operation_id else None,
+        "synced_at": now_iso if body.offline_operation_id else None,
     }
 
     delivery = repo.create_delivery(payload)
@@ -161,16 +164,10 @@ async def record_delivery(
     }).eq("id", body.trip_stop_id).execute()
 
     # ── Update order status ───────────────────────────────────────────────────
-    order_resp = (
-        db.table("trip_stops")
-        .select("order_id")
-        .eq("id", body.trip_stop_id)
-        .maybe_single()
-        .execute()
-    )
-    if order_resp.data:
+    order_id = stop.get("order_id")
+    if order_id:
         order_status = "delivered" if body.outcome == "delivered" else "attempted"
-        db.table("orders").update({"status": order_status}).eq("id", order_resp.data["order_id"]).execute()
+        db.table("orders").update({"status": order_status}).eq("id", order_id).execute()
 
     # ── Auto-update trip to in_transit if this is the first delivery ──────────
     if trip.get("status") == "departed":
@@ -390,7 +387,7 @@ async def confirm_receipt(
         "confirmed_by": current_user["id"],
         "items_received": body.items_received,
         "issues_noted": body.issues_noted,
-        "confirmed_at": datetime.datetime.utcnow().isoformat(),
+        "confirmed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
 
     receipt = repo.create_receipt(payload)

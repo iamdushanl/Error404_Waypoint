@@ -135,6 +135,46 @@ async def list_plans(
     return [DeliveryPlanResponse(**row) for row in (resp.data or [])]
 
 
+@router.get(
+    "/capacity-outlook",
+    summary="Get forward capacity outlook",
+    description="Aggregates backend orders and fleet capacity for the next planning days. Dispatcher only.",
+)
+async def capacity_outlook(
+    start_date: datetime.date,
+    days: int = 5,
+    current_user: dict[str, Any] = Depends(require_role("dispatcher")),
+) -> list[dict[str, Any]]:
+    if days < 1 or days > 14:
+        raise HTTPException(status_code=422, detail="days must be between 1 and 14.")
+    db = get_supabase()
+    end_date = start_date + datetime.timedelta(days=days)
+    vehicles = db.table("vehicles").select("vehicle_id,temp,weight_cap_kg").execute().data or []
+    rows: list[dict[str, Any]] = []
+    for offset in range(days):
+        plan_date = start_date + datetime.timedelta(days=offset)
+        orders = (
+            db.table("orders")
+            .select("total_weight_kg,temp_requirement")
+            .eq("requested_date", str(plan_date))
+            .in_("status", ["submitted", "closed", "allocated", "deferred"])
+            .execute()
+            .data
+            or []
+        )
+        demand_kg = sum(float(order.get("total_weight_kg") or 0) for order in orders)
+        rows.append({
+            "date": str(plan_date),
+            "order_count": len(orders),
+            "demand_weight_kg": round(demand_kg, 2),
+            "vehicle_count": len(vehicles),
+            "vehicle_capacity_kg": round(sum(float(vehicle.get("weight_cap_kg") or 0) for vehicle in vehicles), 2),
+            "reefer_count": sum(1 for vehicle in vehicles if vehicle.get("temp") == "reefer"),
+            "capacity_gap_kg": round(max(0, demand_kg - sum(float(vehicle.get("weight_cap_kg") or 0) for vehicle in vehicles)), 2),
+        })
+    return rows
+
+
 # ── GET /api/v1/planning/plans/{id} ──────────────────────────────────────────
 
 @router.get(

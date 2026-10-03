@@ -7,4 +7,4 @@ npm install
 npx expo start
 ```
 
-The screen state is local and backend-free by design. Wire the passwordless Supabase session, route payload, offline queue, and sync adapter into the existing `Screen` transitions when the API is available.
+`api.ts` provides the native integration boundary: passwordless Supabase OTP, authenticated FastAPI requests, an AsyncStorage queue, stable operation IDs, and `/api/v1/sync` replay. Use it from the screen transitions when wiring native navigation to the same trip/delivery contracts as the browser driver app.

@@ -243,6 +243,39 @@ async def list_trip_deliveries(
     return [DeliveryResponse(**d) for d in (deliveries_resp.data or [])]
 
 
+@router.get(
+    "/outlets/{outlet_id}/deliveries",
+    response_model=list[DeliveryResponse],
+    summary="List deliveries for a store outlet",
+)
+async def list_outlet_deliveries(
+    outlet_id: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> list[DeliveryResponse]:
+    if current_user.get("role") == "store_manager" and current_user.get("outlet_id") != outlet_id:
+        raise HTTPException(status_code=404, detail="Outlet not found.")
+    db = get_supabase()
+    stops_resp = (
+        db.table("trip_stops")
+        .select("id")
+        .eq("outlet_id", outlet_id)
+        .execute()
+    )
+    stop_ids = [stop["id"] for stop in (stops_resp.data or [])]
+    if not stop_ids:
+        return []
+    deliveries = (
+        db.table("deliveries")
+        .select("*")
+        .in_("trip_stop_id", stop_ids)
+        .order("created_at", desc=True)
+        .execute()
+        .data
+        or []
+    )
+    return [DeliveryResponse(**delivery) for delivery in deliveries]
+
+
 # ── POST /api/v1/deliveries/{id}/pod — driver records Proof of Delivery ──────
 
 @router.post(

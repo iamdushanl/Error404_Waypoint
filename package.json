@@ -7,6 +7,7 @@
     "build:mobile": "npm --prefix mobile run build",
     "dev:web": "npm --prefix web run dev",
     "dev:mobile": "npm --prefix mobile run dev",
-    "dev:native": "npm --prefix mobile-native run start"
+    "dev:native": "npm --prefix mobile-native run start",
+    "test:backend": "backend/api/.venv/bin/pytest -q backend/api/tests"
   }
 }

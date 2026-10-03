@@ -1,0 +1,18 @@
+export type BackendRole = 'dispatcher' | 'loader' | 'driver' | 'store_manager';
+export type OrderStatus = 'draft' | 'submitted' | 'closed' | 'allocated' | 'deferred' | 'in_transit' | 'delivered' | 'confirmed';
+export type DeliveryOutcome = 'delivered' | 'attempted' | 'refused';
+
+export interface UserProfile { id: string; email: string; full_name: string; role: BackendRole; outlet_id: string | null; depot: string | null; vehicle_id: string | null; }
+export interface Paged<T> { data: T[]; total: number; limit: number; offset: number; }
+export interface Order { id: string; outlet_id: string; brand: string; requested_date: string; status: OrderStatus; temp_requirement: string; total_weight_kg: number; total_volume_m3: number; notes: string | null; created_by: string | null; submitted_at: string | null; created_at: string; updated_at: string; }
+export interface OrderItemInput { sku: string; description: string; quantity: number; weight_kg: number; volume_m3: number; temp_requirement: 'chilled' | 'ambient'; }
+export interface OrderCreateInput { outlet_id: string; brand: 'Fresh' | 'Style' | 'Tech'; requested_date: string; temp_requirement: 'chilled' | 'ambient'; notes?: string; items: OrderItemInput[]; }
+export interface Trip { id: string; plan_id: string; vehicle_id: string; trip_number: number; brand: string; district: string; depot: string; status: string; planned_departure_time: string | null; total_weight_kg: number; total_volume_m3: number; total_distance_km: number; fuel_used_l: number; estimated_duration_min: number; loader_acknowledged: boolean; driver_acknowledged: boolean; departed_at: string | null; completed_at: string | null; created_at: string; }
+export interface TripStop { id: string; trip_id: string; order_id: string; outlet_id: string; sequence_number: number; load_position: number; planned_arrival_time: string | null; actual_arrival_time: string | null; status: string; }
+export interface TripWithStops extends Trip { stops: TripStop[]; }
+export interface PlanGenerateInput { plan_date: string; depot: 'Peliyagoda' | 'Kandy'; dry_run: boolean; }
+export interface PlanGenerateResult { plan_id: string | null; plan_date: string; depot: string; status: string; validation: { valid: boolean; violation_count: number }; trips: Array<{ vehicle_id: string; trip_number: number; brand: string; district: string; depot: string; orders: string[]; total_weight_kg: number; total_volume_m3: number; estimated_duration_min: number; estimated_distance_km: number; estimated_fuel_l: number; planned_departure_time: string | null; stops: Array<{ order_id: string; outlet_id: string; sequence_number: number; load_position: number; planned_arrival_time: string | null }> }>; deferred_orders: Array<{ order_id: string; reason_code: string; reason_detail: string }>; metrics: Record<string, number | Record<string, number>>; }
+export interface Delivery { id: string; trip_stop_id: string; driver_id: string | null; outcome: DeliveryOutcome; recipient_name: string | null; notes: string | null; delivered_at: string | null; offline_operation_id: string | null; synced_at: string | null; created_at: string; }
+export interface SyncOperation { operation_id: string; operation: 'complete_delivery' | 'record_pod' | 'record_shortfall'; device_id?: string; occurred_at?: string; payload: Record<string, unknown>; }
+export interface SyncResult { operation_id: string; status: 'applied' | 'duplicate' | 'failed'; entity_id: string | null; error_detail: string | null; }
+export interface SyncResponse { results: SyncResult[]; applied_count: number; duplicate_count: number; failed_count: number; }

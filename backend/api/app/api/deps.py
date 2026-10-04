@@ -78,6 +78,21 @@ def verify_supabase_token(token: str) -> dict[str, Any]:
         raise AuthenticationError("Invalid authentication token.")
 
 
+def detect_role_from_email(email: str) -> str:
+    """
+    Detect application role from email address.
+    User role text is not needed as it is detected directly by email.
+    """
+    e = email.lower().strip()
+    if "loader" in e:
+        return "loader"
+    if "dispatcher" in e or "dispatch" in e:
+        return "dispatcher"
+    if "driver" in e:
+        return "driver"
+    return "store_manager"
+
+
 # ── Current user dependency ───────────────────────────────────────────────────
 
 async def get_current_user(
@@ -127,8 +142,34 @@ async def get_current_user(
         )
         user = response.data
     except Exception as e:
-        log.error("Failed to load user profile for %s: %s", supabase_uid, e)
-        raise AuthenticationError("Could not load user profile.")
+        log.warning("User profile lookup for %s: %s", supabase_uid, e)
+        user = None
+
+    if not user:
+        # Role text is not needed from user — automatically detected by email!
+        email = claims.get("email", "")
+        if email:
+            metadata = claims.get("user_metadata", {}) or {}
+            full_name = metadata.get("full_name") or email.split("@")[0].replace(".", " ").title()
+            role = metadata.get("role") or detect_role_from_email(email)
+            outlet_id = "OUT001" if role == "store_manager" else None
+            depot = "Peliyagoda" if role in ("loader", "driver", "dispatcher") else None
+            try:
+                client = get_supabase()
+                new_user_data = {
+                    "id": supabase_uid,
+                    "email": email,
+                    "full_name": full_name,
+                    "role": role,
+                    "outlet_id": outlet_id,
+                    "depot": depot,
+                    "vehicle_id": None,
+                }
+                client.table("users").upsert(new_user_data).execute()
+                user = new_user_data
+                log.info("Auto-provisioned application profile for %s [%s]", email, role)
+            except Exception as insert_err:
+                log.warning("Could not auto-provision user profile for %s: %s", supabase_uid, insert_err)
 
     if not user:
         log.warning("Authenticated user %s has no application profile", supabase_uid)

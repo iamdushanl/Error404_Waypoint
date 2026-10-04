@@ -16,16 +16,81 @@
 .pin-key:disabled{opacity:.35;cursor:not-allowed}
 .pin-del{background:#fff3d9;border-color:#e9cfa0;color:#a66013;font-size:18px}
 .pin-del:hover{background:#ffe9b5 !important;border-color:#c9961a !important}
-/* ── Email + Password Login ────────────────────────────── */
+/* ── Email + Password Login & Registration ─────────────────── */
+.auth{min-height:100vh;display:grid;grid-template-columns:1.1fr .9fr;background:#102f2b}
+.auth-card{align-self:center;justify-self:center;background:#fff;padding:40px 44px;width:min(510px,calc(100% - 36px));box-shadow:0 24px 80px #05151260;border-radius:12px;margin:36px 0;transition:all .25s ease}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;background:#eef3f0;padding:4px;border-radius:9px;margin-bottom:26px;border:1px solid #dce5e0}
+.auth-tab{padding:10px 16px;font-size:13px;font-weight:700;background:transparent;color:#61726d;border-radius:6px;transition:all .18s ease;display:flex;align-items:center;justify-content:center;gap:8px}
+.auth-tab.active{background:#fff;color:#123c36;box-shadow:0 2px 8px #123c3618}
+.auth-card h2{font-size:26px;line-height:1.15;margin:10px 0 8px;font-family:'Space Grotesk',sans-serif;color:#123c36}
+.auth-card>.muted{line-height:1.5;margin-bottom:22px;font-size:13px}
 .role-hints{margin-bottom:22px}
-.role-hints-label{font-size:11px;font-weight:700;letter-spacing:.1em;color:#80908b;text-transform:uppercase;margin-bottom:10px}
+.role-hints-label{font-size:11px;font-weight:700;letter-spacing:.1em;color:#80908b;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between}
+.role-hints-label small{color:#1a6b52;font-size:11px;font-weight:600;letter-spacing:normal;text-transform:none}
 .role-hint-chips{display:flex;flex-wrap:wrap;gap:8px}
-.role-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;background:#f0f7f3;border:1px solid #c8ddd2;border-radius:20px;color:#1a6b52;font-size:12px;font-weight:600;transition:all .15s ease;cursor:pointer}
-.role-chip:hover{background:#d9f3e7;border-color:#7cc5a0;transform:translateY(-1px);box-shadow:0 3px 10px #1a6b5215}
+.role-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;background:#f3f7f4;border:1px solid #cce0d6;border-radius:20px;color:#1d634e;font-size:12px;font-weight:600;transition:all .18s ease;cursor:pointer}
+.role-chip:hover{background:#dcf2e7;border-color:#78c29e;transform:translateY(-1px);box-shadow:0 3px 8px #1a6b5215}
+.role-chip.active{background:#123c36;border-color:#123c36;color:#d7f6e8;box-shadow:0 4px 14px #123c3628}
 .role-chip-dot{width:7px;height:7px;border-radius:50%;background:#6fe1ad;box-shadow:0 0 0 3px #6fe1ad30}
+.role-chip.active .role-chip-dot{background:#45deb0;box-shadow:0 0 0 3px #45deb050}
+.form-group{margin-bottom:16px}
+.auth-card label{display:grid;gap:7px;color:#354942;font-weight:600;font-size:12.5px;margin:13px 0 6px}
+.auth-card input,.auth-card select{border:1.5px solid #dbe3df;padding:0 14px;height:44px;border-radius:7px;background:#fbfcfa;color:var(--ink);outline-color:var(--green);font-size:14px;transition:border-color .15s ease,box-shadow .15s ease}
+.auth-card input:focus{border-color:#176850;box-shadow:0 0 0 3px #17685018;background:#fff}
 .password-wrap{position:relative;display:flex;align-items:center}
-.password-wrap input{flex:1;padding-right:42px}
-.pw-toggle{position:absolute;right:6px;width:32px;height:32px;border-radius:4px;background:transparent;color:#80908b;font-size:16px;display:grid;place-items:center;transition:color .15s}
-.pw-toggle:hover{color:#123c36}
+.password-wrap input{flex:1;padding-right:44px}
+.pw-toggle{position:absolute;right:8px;width:30px;height:30px;border-radius:5px;background:transparent;color:#7e8f89;font-size:15px;display:grid;place-items:center;transition:all .15s}
+.pw-toggle:hover{color:#123c36;background:#f0f4f1}
+/* ── Role Auto-Detection Pill ────────────────────────────── */
+.role-detector{margin:6px 0 14px;padding:12px 14px;border-radius:8px;border:1px solid #d4e5dc;background:#f6fbf8;display:grid;gap:4px;animation:fadein .2s ease}
+.role-detector-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700}
+.role-tag-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:5px;font-size:11.5px;font-weight:700;letter-spacing:.02em}
+.role-detector.role-dispatcher{border-color:#bae6fd;background:#f0f9ff}
+.role-detector.role-dispatcher .role-tag-badge{background:#0284c7;color:#fff}
+.role-detector.role-loader{border-color:#fde68a;background:#fefce8}
+.role-detector.role-loader .role-tag-badge{background:#d97706;color:#fff}
+.role-detector.role-driver{border-color:#ddd6fe;background:#fbfaff}
+.role-detector.role-driver .role-tag-badge{background:#7c3aed;color:#fff}
+.role-detector.role-store_manager{border-color:#bbf7d0;background:#f0fdf4}
+.role-detector.role-store_manager .role-tag-badge{background:#15803d;color:#fff}
+.role-detector-desc{font-size:12px;color:#5a6f68;line-height:1.45}
+.role-detector-meta{display:flex;align-items:center;gap:12px;font-size:11px;color:#7a8d86;margin-top:2px}
+.role-detector-meta span{display:inline-flex;align-items:center;gap:5px}
+.role-guide-hint{font-size:11.5px;color:#7c8d87;margin:6px 0 12px;display:flex;align-items:flex-start;gap:7px;line-height:1.4;background:#f5f8f6;padding:8px 11px;border-radius:6px;border:1px dashed #d5e0da}
+.role-guide-hint b{color:#1a6b52}
+/* ── Password Strength & Match ──────────────────────────── */
+.pw-strength{margin:6px 0 12px}
+.pw-meter-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;height:4px;border-radius:2px;overflow:hidden;background:#e5ece8;margin-bottom:6px}
+.pw-meter-bar{height:100%;transition:background .2s ease}
+.pw-meter-bar.active-1{background:#e53e3e}
+.pw-meter-bar.active-2{background:#dd6b20}
+.pw-meter-bar.active-3{background:#319795}
+.pw-meter-bar.active-4{background:#22935d}
+.pw-strength-label{display:flex;justify-content:space-between;font-size:11px;color:#758781}
+.pw-match-badge{font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;margin-top:4px}
+.pw-match-badge.ok{color:#167d4d}
+.pw-match-badge.bad{color:#c53030}
+/* ── Form Actions & Buttons ─────────────────────────────── */
+.auth-submit{margin-top:18px;height:48px;font-size:14px;letter-spacing:.02em;box-shadow:0 4px 12px #0f5c5230;transition:all .18s ease}
+.auth-submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 18px #0f5c5240}
+.auth-footer-toggle{text-align:center;margin-top:22px;font-size:13px;color:#6d7f78}
+.auth-footer-toggle button{background:none;color:#0f5c52;font-weight:700;text-decoration:underline;padding:0 4px;font-size:13px}
+.auth-footer-toggle button:hover{color:#123c36}
+.auth-success-banner{background:#ecfdf5;border:1px solid #a7f3d0;padding:16px 18px;border-radius:8px;margin-bottom:18px;display:flex;gap:12px;align-items:flex-start}
+.auth-success-banner h4{margin:0 0 4px;color:#065f46;font-size:14px}
+.auth-success-banner p{margin:0;color:#047857;font-size:12.5px;line-height:1.45}
+.auth-remember{display:flex;align-items:center;gap:9px;font-size:12.5px;color:#5a6e67;margin:12px 0 4px;font-weight:500;cursor:pointer}
+.auth-remember input{width:16px;height:16px;accent-color:#0f5c52;cursor:pointer}
+/* ── Left Art Interactive Showcase ──────────────────────── */
+.hero-role-previews{margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hero-role-card{background:#ffffff0d;border:1px solid #ffffff18;padding:12px 14px;border-radius:8px;color:#c0ded2;transition:all .2s ease;cursor:pointer;text-align:left}
+.hero-role-card:hover{background:#ffffff1a;border-color:#79c5a960;transform:translateY(-1px)}
+.hero-role-card.active{background:#ffffff22;border-color:#6fe1ad;color:#fff;box-shadow:0 6px 20px #071f1b60}
+.hero-role-card strong{display:flex;align-items:center;gap:6px;font-size:13px;font-family:'Space Grotesk',sans-serif;color:#fff;margin-bottom:4px}
+.hero-role-card span{display:block;font-size:11px;color:#a4c9bc;line-height:1.35}
+.live-pill{display:inline-flex;align-items:center;gap:7px;background:#ffffff14;border:1px solid #ffffff24;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#9ce2c4;text-transform:uppercase;margin-bottom:18px}
+.live-pill i{width:7px;height:7px;border-radius:50%;background:#45deb0;box-shadow:0 0 0 3px #45deb040;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.2);opacity:.7}}
 .error-text{color:var(--red);display:block;margin-top:14px;line-height:1.5}
 .loading-screen{min-height:100vh;display:grid;place-items:center;font-size:15px;color:#80908b;font-family:'DM Sans',sans-serif}
+

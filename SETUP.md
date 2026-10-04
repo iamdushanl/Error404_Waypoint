@@ -29,13 +29,15 @@ Fill the files with the values from your secret manager. Do not paste secrets in
 
 ## Database and seed
 
-Apply migrations in order:
+Apply migrations in order (001 through 007):
 
 ```bash
 supabase db push
 ```
 
-Or execute `supabase/migrations/*.sql` in the Supabase SQL Editor. Put the confidential reference CSVs in local `data/`, then seed:
+Or execute `supabase/migrations/*.sql` in the Supabase SQL Editor. Migration `007_allow_user_registration.sql` enables self-registration and profile management for authenticated staff.
+
+Put the confidential reference CSVs in local `data/`, then seed:
 
 ```bash
 cd backend/api
@@ -46,7 +48,11 @@ cd ../..
 backend/api/.venv/bin/python scripts/seed.py
 ```
 
-The seed script creates the four demo profiles and sample workflow data. Demo passwords are only for local/demo provisioning; use Supabase OTP/Google in the frontend.
+The seed script creates the four demo profiles and sample workflow data. Authentication uses email and password with instant role auto-detection and staff self-registration support:
+- Dispatcher: `dispatcher@waypoint.demo` (Password: `WaypointDemo2026!`) or `dispatcher@waypoint.lk`
+- Loader: `loader@waypoint.demo` (Password: `WaypointDemo2026!`) or `loader@waypoint.lk`
+- Store Manager: `manager@waypoint.demo` (Password: `WaypointDemo2026!`) or `storemanager@waypoint.lk`
+- Driver: `driver@waypoint.demo` (Password: `WaypointDemo2026!`) or `driver@waypoint.lk`
 
 ## Run
 
@@ -151,7 +157,7 @@ Expected backend result: all tests pass. A full cross-role E2E requires the conf
 
 ## Golden walkthrough
 
-1. Store Manager signs in with OTP or Google, creates and submits an order.
+1. Store Manager signs in with email/password (or registers a new staff account), creates and submits an order.
 2. Dispatcher sees the submitted order, generates a plan, reviews trips and machine-readable deferral reasons, then confirms the plan.
 3. Loader sees the confirmed backend trip in reverse load order, acknowledges it, and records a shortfall.
 4. Driver signs in, sees only the assigned trip, records delivery online or offline, restarts with the operation still queued, then syncs.

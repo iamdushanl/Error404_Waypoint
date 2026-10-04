@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SwipeToAction } from './components/SwipeToAction';
 import { apiConfigError } from './api/client';
-import { getCurrentUser, signInWithPassword, signOut } from './api/auth';
+import { getCurrentUser, detectRoleFromEmail, getRoleMeta, signInWithPassword, signOut, signUpWithPassword } from './api/auth';
 import { supabase } from './api/supabase';
 import type { UserProfile } from './api/types';
 import { createOrder, listOrders, submitOrder } from './api/orders';
@@ -16,24 +16,55 @@ const stops = ['Highland Mart — Kandy', 'Green Valley Store — Peradeniya', '
 const roleScreens: Record<Role, Screen[]> = { 'Store Manager': ['Orders', 'Confirmed', 'Deferral', 'Receipt'], Dispatcher: ['Queue', 'Allocate', 'Board', 'Capacity'], Loader: ['Load list', 'Shortfall', 'Plan changed'], Driver: ['Board'] };
 const displayRole = (role: UserProfile['role']): Role => ({ store_manager: 'Store Manager', dispatcher: 'Dispatcher', loader: 'Loader', driver: 'Driver' })[role] as Role;
 
-const roleAccounts = [
-  { role: 'Loader', email: 'loader@test.com' },
-  { role: 'Store Manager', email: 'manager@test.com' },
-  { role: 'Dispatcher', email: 'dispatcher@test.com' },
-  { role: 'Driver', email: 'driver@test.com' },
+const demoAccounts = [
+  { email: 'dispatcher@waypoint.lk', role: 'Dispatcher', name: 'Sunil Jayawardena', hint: 'Control Tower' },
+  { email: 'loader@waypoint.lk', role: 'Loader', name: 'Kamal Perera', hint: 'Peliyagoda Bay' },
+  { email: 'storemanager@waypoint.lk', role: 'Store Manager', name: 'Nimal Fernando', hint: 'Outlet OUT001' },
+  { email: 'driver@waypoint.lk', role: 'Driver', name: 'Ruwan Silva', hint: 'WP-CAB-9241' },
 ];
 
 function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
+  const [mode, setMode] = useState<'signin' | 'register'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [activeAccount, setActiveAccount] = useState<string | null>(null);
+
   const configuredError = apiConfigError();
 
+  // Role is automatically detected from email — user role text input is NOT needed
+  const detectedRole = detectRoleFromEmail(email);
+  const roleMeta = getRoleMeta(detectedRole);
+  const hasEmail = email.trim().length > 0;
+
+  // Real-time password strength calculation for registration
+  const getStrengthScore = (pw: string) => {
+    if (!pw) return 0;
+    let score = 0;
+    if (pw.length >= 6) score++;
+    if (pw.length >= 8) score++;
+    if (/[0-9]/.test(pw) && /[a-zA-Z]/.test(pw)) score++;
+    if (/[^a-zA-Z0-9]/.test(pw) || /[A-Z]/.test(pw)) score++;
+    return score;
+  };
+  const pwStrength = getStrengthScore(password);
+  const pwStrengthLabels = ['Too short', 'Weak', 'Fair', 'Good', 'Strong'];
+
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+
   const handleLogin = async () => {
+    if (!email || !password) return;
     setBusy(true);
     setError('');
+    setSuccessMsg('');
     try {
       await signInWithPassword(email, password);
       onSignedIn(await getCurrentUser());
@@ -44,13 +75,307 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
     }
   };
 
-  const quickLogin = (accountEmail: string) => {
-    setEmail(accountEmail);
-    setPassword('testpass123');
+  const handleRegister = async () => {
+    if (!email || !password || !fullName) {
+      setError('Please fill in your name, email, and password.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match. Please verify both fields.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    setSuccessMsg('');
+    try {
+      await signUpWithPassword(email, password, fullName);
+      try {
+        const user = await getCurrentUser();
+        onSignedIn(user);
+      } catch {
+        setSuccessMsg(`Account created successfully for ${fullName}! Your role is configured as ${roleMeta.displayTitle}. You can now sign in.`);
+        setMode('signin');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Registration failed. Please check your credentials.');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  return <main className="auth"><div className="auth-art"><div className="brand-mark">W</div><p className="eyebrow">WAYPOINT FRESH</p><h1>Move the morning<br /><em>with confidence.</em></h1><p className="muted light">One operational rhythm from outlet order to confirmed receipt.</p><div className="route-art"><span>DC</span><i /><span>01</span><i /><span>02</span><i /><span>03</span></div></div><section className="auth-card"><p className="eyebrow">CONTROL TOWER</p><h2>Sign in to your account</h2><p className="muted">Enter your email and password to continue.</p><div className="role-hints"><p className="role-hints-label">Quick login:</p><div className="role-hint-chips">{roleAccounts.map(a => <button key={a.email} className="role-chip" onClick={() => quickLogin(a.email)}><span className="role-chip-dot" />{a.role}</button>)}</div></div><label>Email<input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@waypoint.lk" type="email" /></label><label>Password<div className="password-wrap"><input value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" type={showPassword ? 'text' : 'password'} onKeyDown={e => e.key === 'Enter' && email && password && handleLogin()} /><button className="pw-toggle" type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? '◉' : '○'}</button></div></label><button className="primary full" disabled={busy || !email || !password} onClick={handleLogin}>{busy ? 'Signing in…' : 'Sign in'} <span>→</span></button>{configuredError && <small className="error-text">{configuredError}</small>}{error && <small className="error-text">{error}</small>}</section></main>;
+  const quickFill = (account: typeof demoAccounts[0]) => {
+    setEmail(account.email);
+    setPassword('waypoint123');
+    setConfirmPassword('waypoint123');
+    setFullName(account.name);
+    setActiveAccount(account.email);
+    setError('');
+  };
+
+  return (
+    <main className="auth">
+      <div className="auth-art">
+        <div className="brand-mark">W</div>
+        <p className="eyebrow">WAYPOINT FRESH LOGISTICS</p>
+        <h1>Move the morning<br /><em>with confidence.</em></h1>
+        <p className="muted light">
+          Constraint-aware fleet planning, reverse-load pallet sequencing, and verified store delivery receipts.
+        </p>
+
+        <div className="hero-role-previews">
+          {demoAccounts.map(acc => {
+            const accMeta = getRoleMeta(detectRoleFromEmail(acc.email));
+            const isMatch = detectedRole === accMeta.role;
+            return (
+              <button
+                key={acc.email}
+                type="button"
+                className={`hero-role-card ${isMatch ? 'active' : ''}`}
+                onClick={() => quickFill(acc)}
+              >
+                <strong>{accMeta.icon} {acc.role}</strong>
+                <span>{acc.hint} · {accMeta.screens.length} workspaces</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="route-art">
+          <span>DC Peliyagoda</span><i /><span>01 Kandy</span><i /><span>02 Peradeniya</span><i /><span>03 Gampola</span>
+        </div>
+      </div>
+
+      <section className="auth-card">
+        <div className="auth-tabs">
+          <button
+            type="button"
+            className={`auth-tab ${mode === 'signin' ? 'active' : ''}`}
+            onClick={() => { setMode('signin'); setError(''); setSuccessMsg(''); }}
+          >
+            <span>🔐</span> Sign in
+          </button>
+          <button
+            type="button"
+            className={`auth-tab ${mode === 'register' ? 'active' : ''}`}
+            onClick={() => { setMode('register'); setError(''); setSuccessMsg(''); }}
+          >
+            <span>✨</span> Create account
+          </button>
+        </div>
+
+        <p className="eyebrow">{mode === 'signin' ? 'OPERATIONAL ACCESS' : 'NEW STAFF ONBOARDING'}</p>
+        <h2>{mode === 'signin' ? 'Sign in to your workspace' : 'Create your staff account'}</h2>
+        <p className="muted">
+          {mode === 'signin'
+            ? 'Access your role-based logistics dashboard with your credentials.'
+            : 'Register your account. Your operational role is automatically detected by your email.'}
+        </p>
+
+        {successMsg && (
+          <div className="auth-success-banner">
+            <div>✓</div>
+            <div>
+              <h4>Account ready</h4>
+              <p>{successMsg}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="role-hints">
+          <p className="role-hints-label">
+            <span>Quick fill demo accounts:</span>
+            <small>Click to auto-fill</small>
+          </p>
+          <div className="role-hint-chips">
+            {demoAccounts.map(a => (
+              <button
+                key={a.email}
+                type="button"
+                className={`role-chip ${activeAccount === a.email ? 'active' : ''}`}
+                onClick={() => quickFill(a)}
+              >
+                <span className="role-chip-dot" />
+                {a.email}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {mode === 'register' && (
+          <label>
+            Full name
+            <input
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              placeholder="e.g. Sunil Jayawardena"
+              type="text"
+              autoComplete="name"
+            />
+          </label>
+        )}
+
+        <label>
+          Email address
+          <input
+            value={email}
+            onChange={e => {
+              setEmail(e.target.value);
+              setActiveAccount(null);
+            }}
+            placeholder="you@waypoint.lk (e.g. dispatcher@, loader@, driver@, store@)"
+            type="email"
+            autoComplete="email"
+          />
+        </label>
+
+        {/* Live Role Detection Display — NO manual role input/text required! */}
+        {hasEmail ? (
+          <div className={`role-detector role-${detectedRole}`}>
+            <div className="role-detector-head">
+              <span className="role-tag-badge">{roleMeta.icon} {roleMeta.displayTitle}</span>
+              <span className="role-chip-dot" style={{ display: 'inline-block' }} />
+            </div>
+            <p className="role-detector-desc">{roleMeta.description}</p>
+            <div className="role-detector-meta">
+              <span><b>Workspace:</b> {roleMeta.tagline}</span>
+              <span>·</span>
+              <span><b>Node:</b> {roleMeta.assignment}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="role-guide-hint">
+            <span>💡</span>
+            <span><b>Role auto-detection:</b> Your system role (Dispatcher, Loader, Driver, Store Manager) is detected automatically from your email. No manual role selection required.</span>
+          </div>
+        )}
+
+        <label>
+          Password
+          <div className="password-wrap">
+            <input
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  if (mode === 'signin' && email && password) handleLogin();
+                  if (mode === 'register' && email && password && confirmPassword) handleRegister();
+                }
+              }}
+            />
+            <button
+              className="pw-toggle"
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? '◉' : '○'}
+            </button>
+          </div>
+        </label>
+
+        {mode === 'register' && password.length > 0 && (
+          <div className="pw-strength">
+            <div className="pw-meter-bars">
+              <div className={`pw-meter-bar ${pwStrength >= 1 ? `active-${pwStrength}` : ''}`} />
+              <div className={`pw-meter-bar ${pwStrength >= 2 ? `active-${pwStrength}` : ''}`} />
+              <div className={`pw-meter-bar ${pwStrength >= 3 ? `active-${pwStrength}` : ''}`} />
+              <div className={`pw-meter-bar ${pwStrength >= 4 ? `active-${pwStrength}` : ''}`} />
+            </div>
+            <div className="pw-strength-label">
+              <span>Security strength</span>
+              <strong>{pwStrengthLabels[pwStrength]}</strong>
+            </div>
+          </div>
+        )}
+
+        {mode === 'register' && (
+          <label>
+            Confirm password
+            <div className="password-wrap">
+              <input
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && email && password && confirmPassword) handleRegister();
+                }}
+              />
+              <button
+                className="pw-toggle"
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+              >
+                {showConfirmPassword ? '◉' : '○'}
+              </button>
+            </div>
+            {passwordsMatch && (
+              <span className="pw-match-badge ok">✓ Passwords match</span>
+            )}
+            {passwordsMismatch && (
+              <span className="pw-match-badge bad">✕ Passwords do not match yet</span>
+            )}
+          </label>
+        )}
+
+        {mode === 'signin' && (
+          <label className="auth-remember">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={e => setRememberMe(e.target.checked)}
+            />
+            Keep me signed in on this station
+          </label>
+        )}
+
+        <button
+          className="primary full auth-submit"
+          disabled={busy || !email || !password || (mode === 'register' && (!fullName || !confirmPassword || passwordsMismatch))}
+          onClick={mode === 'signin' ? handleLogin : handleRegister}
+        >
+          {busy
+            ? (mode === 'signin' ? 'Signing in…' : 'Creating account…')
+            : (mode === 'signin'
+                ? `Sign in as ${hasEmail ? roleMeta.displayTitle : 'staff'}`
+                : `Register as ${hasEmail ? roleMeta.displayTitle : 'staff'}`)
+          } <span>→</span>
+        </button>
+
+        <div className="auth-footer-toggle">
+          {mode === 'signin' ? (
+            <span>
+              Need a new staff account?{' '}
+              <button type="button" onClick={() => { setMode('register'); setError(''); }}>
+                Create account
+              </button>
+            </span>
+          ) : (
+            <span>
+              Already registered?{' '}
+              <button type="button" onClick={() => { setMode('signin'); setError(''); }}>
+                Sign in
+              </button>
+            </span>
+          )}
+        </div>
+
+        {configuredError && <small className="error-text">{configuredError}</small>}
+        {error && <small className="error-text">{error}</small>}
+      </section>
+    </main>
+  );
 }
+
 
 function Shell({ role, profile, onSignOut }: { role: Role; profile: UserProfile; onSignOut: () => void }) { const [screen, setScreen] = useState<Screen>(roleScreens[role][0]); const [toast, setToast] = useState(''); const [qty, setQty] = useState(items.map(x => x.qty)); const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400); }; useEffect(() => setScreen(roleScreens[role][0]), [role]); return <div className="app-shell"><aside><div className="side-brand"><div className="brand-mark small">W</div><span>WAYPOINT</span></div><div className="workspace"><span className="dot" />Fresh network<strong>{role}</strong></div><nav>{roleScreens[role].map(item => <button className={item === screen ? 'active' : ''} key={item} onClick={() => setScreen(item)}><span className="nav-icon">{icon(item)}</span>{label(item)}</button>)}</nav><div className="side-bottom"><div className="network"><span className="dot" />All systems operational</div><button className="profile" onClick={onSignOut}><span className="avatar">{role[0]}</span><span><b>{profile.full_name}</b><small>Sign out</small></span><span>↗</span></button></div></aside><section className="main"><header><div><p className="eyebrow">{role.toUpperCase()} / {profile.email}</p><h1>{title(screen)}</h1></div><div className="header-actions"><span className="live"><i />Live workspace</span><button className="icon-button" onClick={() => notify('Notifications are clear')}>♡</button></div></header><div className="content">{screenView(screen, qty, setQty, notify, profile)}</div>{toast && <div className="toast">✓ {toast}</div>}</section></div> }
 function icon(s: Screen) { return ({ Orders: '＋', Confirmed: '✓', Deferral: '!', Receipt: '□', Queue: '≡', Allocate: '◈', Board: '◉', Capacity: '⌁', 'Load list': '▤', Shortfall: '△', 'Plan changed': '↻' } as Record<Screen, string>)[s]; }

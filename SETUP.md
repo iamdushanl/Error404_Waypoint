@@ -29,13 +29,15 @@ Fill the files with the values from your secret manager. Do not paste secrets in
 
 ## Database and seed
 
-Apply migrations in order:
+Apply migrations in order (001 through 007):
 
 ```bash
 supabase db push
 ```
 
-Or execute `supabase/migrations/*.sql` in the Supabase SQL Editor. Put the confidential reference CSVs in local `data/`, then seed:
+Or execute `supabase/migrations/*.sql` in the Supabase SQL Editor. Migration `007_allow_user_registration.sql` enables self-registration and profile management for authenticated staff.
+
+Put the confidential reference CSVs in local `data/`, then seed:
 
 ```bash
 cd backend/api
@@ -46,7 +48,11 @@ cd ../..
 backend/api/.venv/bin/python scripts/seed.py
 ```
 
-The seed script creates the four demo profiles and sample workflow data. Demo passwords are only for local/demo provisioning; use Supabase OTP/Google in the frontend.
+The seed script creates the four demo profiles and sample workflow data. Authentication uses email and password with instant role auto-detection and staff self-registration support:
+- Dispatcher: `dispatcher@waypoint.demo` (Password: `WaypointDemo2026!`) or `dispatcher@waypoint.lk`
+- Loader: `loader@waypoint.demo` (Password: `WaypointDemo2026!`) or `loader@waypoint.lk`
+- Store Manager: `manager@waypoint.demo` (Password: `WaypointDemo2026!`) or `storemanager@waypoint.lk`
+- Driver: `driver@waypoint.demo` (Password: `WaypointDemo2026!`) or `driver@waypoint.lk`
 
 ## Run
 
@@ -156,14 +162,14 @@ Expected result: all unit/integration tests and all 5 walkthrough steps pass wit
 
 ## Golden walkthrough & Demo Credentials
 
-Pre-provisioned demo accounts (Password: `waypoint123`):
-- **Store Manager**: `storemanager@waypoint.lk` (Outlet `OUT001`)
-- **Dispatcher**: `dispatcher@waypoint.lk` (Depot `Peliyagoda`)
-- **Loader**: `loader@waypoint.lk` (Depot `Peliyagoda`)
-- **Driver**: `driver@waypoint.lk` (Vehicle `VEH035`, Depot `Peliyagoda`)
+Pre-provisioned demo accounts:
+- **Store Manager**: `manager@waypoint.demo` / `WaypointDemo2026!` (or `storemanager@waypoint.lk` / `waypoint123`) · Outlet `OUT001`
+- **Dispatcher**: `dispatcher@waypoint.demo` / `WaypointDemo2026!` (or `dispatcher@waypoint.lk` / `waypoint123`) · Depot `Peliyagoda`
+- **Loader**: `loader@waypoint.demo` / `WaypointDemo2026!` (or `loader@waypoint.lk` / `waypoint123`) · Depot `Peliyagoda`
+- **Driver**: `driver@waypoint.demo` / `WaypointDemo2026!` (or `driver@waypoint.lk` / `waypoint123`) · Vehicle `VEH035`, Depot `Peliyagoda`
 
 Workflow sequence:
-1. Store Manager signs in, creates and submits an order.
+1. Store Manager signs in with email/password (or registers a new staff account), creates and submits an order.
 2. Dispatcher reviews order queue, runs constraint-based allocation, checks deferrals, and confirms plan.
 3. Loader views the confirmed trip in reverse load order, acknowledges it, and records a shortfall.
 4. Driver signs in, views assigned route, acknowledges and departs depot, records delivery outcome & Proof of Delivery, and tests offline idempotent sync.

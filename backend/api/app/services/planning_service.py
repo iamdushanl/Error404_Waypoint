@@ -365,7 +365,7 @@ class PlanningService:
             .maybe_single()
             .execute()
         )
-        if resp and resp.data:
+        if getattr(resp, "data", None):
             plan_status = resp.data.get("status", "draft")
             if plan_status != "draft":
                 raise ValueError(

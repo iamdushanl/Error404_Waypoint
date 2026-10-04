@@ -3,9 +3,11 @@ import './SwipeToAction.css';
 
 interface SwipeToActionProps {
   children: React.ReactNode;
+  onSwipeRight?: () => void;
+  onSwipeLeft?: () => void;
 }
 
-export const SwipeToAction: React.FC<SwipeToActionProps> = ({ children }) => {
+export const SwipeToAction: React.FC<SwipeToActionProps> = ({ children, onSwipeRight, onSwipeLeft }) => {
   const [translateX, setTranslateX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   
@@ -34,9 +36,9 @@ export const SwipeToAction: React.FC<SwipeToActionProps> = ({ children }) => {
     
     // Action zones trigger logic
     if (translateX > 90) {
-      // Swiped right -> Load action
+      if (onSwipeRight) onSwipeRight();
     } else if (translateX < -90) {
-      // Swiped left -> Report action
+      if (onSwipeLeft) onSwipeLeft();
     }
     
     // Snap back in all scenarios

@@ -19,6 +19,7 @@ from functools import lru_cache
 from supabase import Client, create_client
 
 from app.core.config import get_settings
+import httpx
 
 
 @lru_cache(maxsize=1)
@@ -36,7 +37,19 @@ def get_supabase() -> Client:
     if not settings.SUPABASE_SERVICE_ROLE_KEY:
         raise RuntimeError("SUPABASE_SERVICE_ROLE_KEY is not configured.")
 
-    return create_client(
+    client = create_client(
         settings.SUPABASE_URL,
         settings.SUPABASE_SERVICE_ROLE_KEY,
     )
+    if settings.ENVIRONMENT == "development" or settings.DEBUG:
+        try:
+            old_session = client.postgrest.session
+            client.postgrest.session = httpx.Client(
+                base_url=old_session.base_url,
+                headers=old_session.headers,
+                timeout=old_session.timeout,
+                verify=False
+            )
+        except Exception:
+            pass
+    return client

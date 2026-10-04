@@ -17,10 +17,10 @@ const roleScreens: Record<Role, Screen[]> = { 'Store Manager': ['Orders', 'Confi
 const displayRole = (role: UserProfile['role']): Role => ({ store_manager: 'Store Manager', dispatcher: 'Dispatcher', loader: 'Loader', driver: 'Driver' })[role] as Role;
 
 const roleAccounts = [
-  { role: 'Loader', email: 'loader@waypoint.lk' },
-  { role: 'Store Manager', email: 'storemanager@waypoint.lk' },
-  { role: 'Dispatcher', email: 'dispatcher@waypoint.lk' },
-  { role: 'Driver', email: 'driver@waypoint.lk' },
+  { role: 'Loader', email: 'loader@test.com' },
+  { role: 'Store Manager', email: 'manager@test.com' },
+  { role: 'Dispatcher', email: 'dispatcher@test.com' },
+  { role: 'Driver', email: 'driver@test.com' },
 ];
 
 function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
@@ -46,7 +46,7 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
 
   const quickLogin = (accountEmail: string) => {
     setEmail(accountEmail);
-    setPassword('waypoint123');
+    setPassword('testpass123');
   };
 
   return <main className="auth"><div className="auth-art"><div className="brand-mark">W</div><p className="eyebrow">WAYPOINT FRESH</p><h1>Move the morning<br /><em>with confidence.</em></h1><p className="muted light">One operational rhythm from outlet order to confirmed receipt.</p><div className="route-art"><span>DC</span><i /><span>01</span><i /><span>02</span><i /><span>03</span></div></div><section className="auth-card"><p className="eyebrow">CONTROL TOWER</p><h2>Sign in to your account</h2><p className="muted">Enter your email and password to continue.</p><div className="role-hints"><p className="role-hints-label">Quick login:</p><div className="role-hint-chips">{roleAccounts.map(a => <button key={a.email} className="role-chip" onClick={() => quickLogin(a.email)}><span className="role-chip-dot" />{a.role}</button>)}</div></div><label>Email<input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@waypoint.lk" type="email" /></label><label>Password<div className="password-wrap"><input value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" type={showPassword ? 'text' : 'password'} onKeyDown={e => e.key === 'Enter' && email && password && handleLogin()} /><button className="pw-toggle" type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? '◉' : '○'}</button></div></label><button className="primary full" disabled={busy || !email || !password} onClick={handleLogin}>{busy ? 'Signing in…' : 'Sign in'} <span>→</span></button>{configuredError && <small className="error-text">{configuredError}</small>}{error && <small className="error-text">{error}</small>}</section></main>;

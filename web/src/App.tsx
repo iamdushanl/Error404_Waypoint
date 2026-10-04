@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SwipeToAction } from './components/SwipeToAction';
 import { apiConfigError } from './api/client';
 import { getCurrentUser, detectRoleFromEmail, getRoleMeta, signInWithPassword, signOut, signUpWithPassword } from './api/auth';
@@ -393,7 +393,103 @@ function Queue() { const [rows, setRows] = useState<Array<{ id: string; brand: s
 function Allocate({ notify }: { notify: (m: string) => void }) { const [depot, setDepot] = useState<'Peliyagoda' | 'Kandy'>('Peliyagoda'); const [planDate, setPlanDate] = useState(new Date(Date.now() + 86400000).toISOString().slice(0, 10)); const [plan, setPlan] = useState<Awaited<ReturnType<typeof generatePlan>> | null>(null); const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle'); const [error, setError] = useState(''); const run = async () => { setState('loading'); setError(''); try { const result = await generatePlan({ plan_date: planDate, depot, dry_run: false }); setPlan(result); setState('success'); notify('Plan generated from backend'); } catch (e) { setError(e instanceof Error ? e.message : 'Plan generation failed.'); setState('error'); } }; return <><div className="banner warning">The allocation engine owns capacity, temperature, window, depot, trip, and fuel constraints.</div><div className="section-head"><div><span className="overline">DISPATCH PLAN</span><h2>Generate a constraint-aware plan</h2></div><div className="action-row"><select value={depot} onChange={e => setDepot(e.target.value as 'Peliyagoda' | 'Kandy')}><option>Peliyagoda</option><option>Kandy</option></select><input type="date" value={planDate} onChange={e => setPlanDate(e.target.value)} /><button className="primary" disabled={state === 'loading'} onClick={() => void run()}>{state === 'loading' ? 'Generating…' : 'Generate plan'} <span>→</span></button></div></div>{state === 'error' && <Panel><p className="error-text">{error}</p><button className="secondary" onClick={() => void run()}>Retry</button></Panel>}{state === 'idle' && <Panel>Choose a depot and date, then generate a plan from the backend.</Panel>}{plan && <><div className="kpi-grid"><Kpi label="Total orders" value={String(plan.metrics.total_orders)} sub="Submitted for date" /><Kpi label="Served" value={String(plan.metrics.served_orders)} sub="Allocated" /><Kpi label="Deferred" value={String(plan.metrics.deferred_orders)} sub="Backend reason recorded" tone="amber" /><Kpi label="Trips" value={String(plan.metrics.trips_created)} sub="Vehicles used" /></div><Panel><h3>Generated trips</h3>{plan.trips.map(trip => <div className="line" key={`${trip.vehicle_id}-${trip.trip_number}`}><span><b>{trip.vehicle_id}</b><small>{trip.brand} · {trip.district} · {trip.orders.length} orders</small></span><span>{trip.total_weight_kg} kg · {trip.estimated_distance_km} km · {trip.estimated_duration_min} min</span></div>)}</Panel><Panel><h3>Deferred orders and reasons</h3>{plan.deferred_orders.length === 0 ? <p>No deferred orders.</p> : plan.deferred_orders.map(order => <div className="line" key={order.order_id}><span><b>{order.order_id}</b><small>{order.reason_detail}</small></span><Status tone="amber">{order.reason_code}</Status></div>)}</Panel></>}</> }
 function Board() { const [trips, setTrips] = useState<Array<{ id: string; vehicle_id: string; brand: string; district: string; status: string; total_weight_kg: number; total_volume_m3: number }>>([]); const [state, setState] = useState<'loading' | 'success' | 'empty' | 'error'>('loading'); const [error, setError] = useState(''); const load = async () => { setState('loading'); try { const result = await listTrips('?limit=100'); setTrips(result.data); setState(result.data.length ? 'success' : 'empty'); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load trips.'); setState('error'); } }; useEffect(() => { void load(); }, []); return <><div className="kpi-grid"><Kpi label="Trips" value={state === 'success' ? String(trips.length) : '—'} sub="From backend" /><Kpi label="Planned" value={state === 'success' ? String(trips.filter(t => t.status === 'planned').length) : '—'} sub="Awaiting departure" /><Kpi label="In transit" value={state === 'success' ? String(trips.filter(t => ['departed', 'in_transit'].includes(t.status)).length) : '—'} sub="Active routes" /><Kpi label="Completed" value={state === 'success' ? String(trips.filter(t => t.status === 'completed').length) : '—'} sub="Closed trips" tone="slate" /></div>{state === 'loading' && <Panel>Loading trips…</Panel>}{state === 'error' && <Panel><p className="error-text">{error}</p><button className="secondary" onClick={() => void load()}>Retry</button></Panel>}{state === 'empty' && <Panel>No trips found.</Panel>}{state === 'success' && <Panel className="table-panel"><div className="table-head board-grid"><span>Vehicle</span><span>Brand / district</span><span>Capacity</span><span>Status</span><span>Trip</span></div>{trips.map(trip => <div className="table-row board-grid" key={trip.id}><b className="mono">{trip.vehicle_id}</b><span>{trip.brand} · {trip.district}</span><span>{trip.total_weight_kg} kg / {trip.total_volume_m3} m³</span><span>{trip.status}</span><Status tone={trip.status === 'completed' ? 'green' : trip.status === 'deferred' ? 'amber' : 'blue'}>{trip.status}</Status></div>)}</Panel>}</> }
 function Capacity() { const [rows, setRows] = useState<Awaited<ReturnType<typeof getCapacityOutlook>>>([]); const [state, setState] = useState<'loading' | 'success' | 'empty' | 'error'>('loading'); useEffect(() => { getCapacityOutlook(new Date().toISOString().slice(0, 10)).then(result => { setRows(result); setState(result.length ? 'success' : 'empty'); }).catch(() => setState('error')); }, []); return <><div className="section-head"><div><span className="overline">BACKEND CAPACITY OUTLOOK</span><h2>Demand against available fleet</h2></div></div>{state === 'loading' && <Panel>Loading capacity outlook…</Panel>}{state === 'error' && <Panel><p className="error-text">Unable to load capacity outlook.</p></Panel>}{state === 'empty' && <Panel>No capacity outlook data is available.</Panel>}{state === 'success' && <Panel><div className="capacity-list">{rows.map(row => <div className="forecast" key={row.date}><b>{row.date}</b><span>{row.order_count} orders · {row.demand_weight_kg} kg demand</span><strong className={row.capacity_gap_kg ? 'red' : 'green'}>{row.capacity_gap_kg ? `${row.capacity_gap_kg} kg shortage` : 'No gap'}</strong><Status tone={row.capacity_gap_kg ? 'amber' : 'green'}>{row.vehicle_count} vehicles · {row.reefer_count} reefer</Status></div>)}</div></Panel>}</> }
-function LoadList({ notify }: { notify: (m: string) => void }) { const [trip, setTrip] = useState<Awaited<ReturnType<typeof getTrip>> | null>(null); const [state, setState] = useState<'loading' | 'success' | 'empty' | 'error'>('loading'); const [error, setError] = useState(''); useEffect(() => { listTrips('?status=planned&limit=1').then(result => result.data[0] ? getTrip(result.data[0].id).then(value => { localStorage.setItem('waypoint.loader.trip-id', value.id); if (value.stops[0]) localStorage.setItem('waypoint.loader.stop-id', value.stops[0].id); setTrip(value); setState('success'); }) : setState('empty')).catch(e => { setError(e instanceof Error ? e.message : 'Unable to load trip.'); setState('error'); }); }, []); const acknowledge = async () => { if (!trip) return; try { await acknowledgeTrip(trip.id, 'loader'); setTrip({ ...trip, loader_acknowledged: true }); notify('Trip acknowledged'); } catch (e) { notify(e instanceof Error ? e.message : 'Acknowledge failed'); } }; if (state === 'loading') return <Panel>Loading assigned trip…</Panel>; if (state === 'error') return <Panel><p className="error-text">{error}</p></Panel>; if (state === 'empty' || !trip) return <Panel>No confirmed trip is assigned to this depot.</Panel>; const orderedStops = [...trip.stops].sort((a, b) => a.load_position - b.load_position); return <><div className="dark-banner"><div><span className="overline">VEHICLE · {trip.vehicle_id} · {trip.depot}</span><h2>Load in reverse-unload order</h2><p>Backend-provided load positions are shown below.</p></div><Status tone={trip.loader_acknowledged ? 'green' : 'amber'}>{trip.loader_acknowledged ? 'Acknowledged' : 'Review required'}</Status></div>{orderedStops.map(stop => <SwipeToAction key={stop.id}><Panel className={`stop-card ${stop.status === 'loaded' ? 'loaded' : stop.status === 'shortfall' ? 'shortfall' : ''}`}><div className="stop-number">{stop.status === 'loaded' ? '✓' : stop.status === 'shortfall' ? '!' : stop.load_position}</div><div className="stop-copy"><div className="card-line"><div><b>Outlet {stop.outlet_id}</b><small>Load position {stop.load_position} · Delivery stop {stop.sequence_number}</small></div><Status tone={stop.status === 'shortfall' ? 'amber' : 'blue'}>{stop.status}</Status></div><p>Order {stop.order_id} · Planned arrival {stop.planned_arrival_time ?? 'Not scheduled'}</p></div></Panel></SwipeToAction>)}<div className="action-row"><button className="secondary" onClick={() => notify('Open Flag shortfall after selecting the affected backend stop')}>Flag shortfall</button><button className="primary" disabled={trip.loader_acknowledged} onClick={() => void acknowledge()}>{trip.loader_acknowledged ? 'Acknowledged' : 'Acknowledge trip'} <span>→</span></button></div></> }
-function Shortfall({ notify }: { notify: (m: string) => void }) { const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const submit = async () => { const tripId = localStorage.getItem('waypoint.loader.trip-id'); const stopId = localStorage.getItem('waypoint.loader.stop-id'); if (!tripId || !stopId) { setError('Open a backend trip before recording a shortfall.'); return; } setBusy(true); setError(''); try { await recordShortfall(tripId, stopId, { issue_type: 'missing', sku: 'FRESH-MLK-001', description: 'Anchor Full Cream Milk 1L', expected_quantity: 12, actual_quantity: 6 }); notify('Shortfall recorded in backend'); } catch (e) { setError(e instanceof Error ? e.message : 'Shortfall could not be recorded.'); } finally { setBusy(false); } }; return <div className="narrow"><div className="banner warning">Record the affected quantity before the vehicle leaves.</div>{error && <div className="banner critical">{error}</div>}<Panel><span className="overline">STEP 1 · ISSUE TYPE</span><div className="choice-grid"><button className="selected">▣<b>Missing</b><small>Stock not available</small></button><button>▧<b>Damaged</b><small>Cannot dispatch</small></button><button>△<b>Wrong item</b><small>Incorrect SKU</small></button></div></Panel><Panel><span className="overline">STEP 2 · AFFECTED ITEM</span><h3>Anchor Full Cream Milk 1L</h3><p className="muted">Expected 12 units · Received 6 units · Gampola stop</p><div className="quantity"><span>Units missing</span><b>6</b></div></Panel><Panel><span className="overline">EVIDENCE</span><div className="photo">⌾<span>Attach photo of empty crate / shelf</span></div><textarea placeholder="Notes (optional)" /></Panel><button className="primary full" disabled={busy} onClick={() => void submit}>{busy ? 'Recording…' : 'Confirm shortfall · 6 missing'}</button></div> }
+function LoadList({ notify }: { notify: (m: string) => void }) { const [trip, setTrip] = useState<Awaited<ReturnType<typeof getTrip>> | null>(null); const [state, setState] = useState<'loading' | 'success' | 'empty' | 'error'>('loading'); const [error, setError] = useState(''); useEffect(() => { listTrips('?status=planned&limit=1').then(result => result.data[0] ? getTrip(result.data[0].id).then(value => { localStorage.setItem('waypoint.loader.trip-id', value.id); if (value.stops[0]) localStorage.setItem('waypoint.loader.stop-id', value.stops[0].id); setTrip(value); setState('success'); }) : setState('empty')).catch(e => { setError(e instanceof Error ? e.message : 'Unable to load trip.'); setState('error'); }); }, []); const acknowledge = async () => { if (!trip) return; try { await acknowledgeTrip(trip.id, 'loader'); setTrip({ ...trip, loader_acknowledged: true }); notify('Trip acknowledged'); } catch (e) { notify(e instanceof Error ? e.message : 'Acknowledge failed'); } }; if (state === 'loading') return <Panel>Loading assigned trip…</Panel>; if (state === 'error') return <Panel><p className="error-text">{error}</p></Panel>; if (state === 'empty' || !trip) return <Panel>No confirmed trip is assigned to this depot.</Panel>; const orderedStops = [...trip.stops].sort((a, b) => a.load_position - b.load_position); return <><div className="dark-banner"><div><span className="overline">VEHICLE · {trip.vehicle_id} · {trip.depot}</span><h2>Load in reverse-unload order</h2><p>Backend-provided load positions are shown below.</p></div><Status tone={trip.loader_acknowledged ? 'green' : 'amber'}>{trip.loader_acknowledged ? 'Acknowledged' : 'Review required'}</Status></div>{orderedStops.map(stop => <SwipeToAction key={stop.id} onSwipeRight={() => setTrip({ ...trip, stops: trip.stops.map(s => s.id === stop.id ? { ...s, status: 'loaded' } : s) })}><Panel className={`stop-card ${stop.status === 'loaded' ? 'loaded' : stop.status === 'shortfall' ? 'shortfall' : ''}`}><div className="stop-number">{stop.status === 'loaded' ? '✓' : stop.status === 'shortfall' ? '!' : stop.load_position}</div><div className="stop-copy"><div className="card-line"><div><b>Outlet {stop.outlet_id}</b><small>Load position {stop.load_position} · Delivery stop {stop.sequence_number}</small></div><Status tone={stop.status === 'shortfall' ? 'amber' : 'blue'}>{stop.status}</Status></div><p>Order {stop.order_id} · Planned arrival {stop.planned_arrival_time ?? 'Not scheduled'}</p></div></Panel></SwipeToAction>)}<div className="action-row"><button className="secondary" onClick={() => notify('Open Flag shortfall after selecting the affected backend stop')}>Flag shortfall</button><button className="primary" disabled={trip.loader_acknowledged} onClick={() => void acknowledge()}>{trip.loader_acknowledged ? 'Acknowledged' : 'Acknowledge trip'} <span>→</span></button></div></> }
+function Shortfall({ notify }: { notify: (m: string) => void }) {
+  const EXPECTED = 12;
+  type IssueType = 'missing' | 'damaged' | 'wrong_item';
+  const issueOptions: { type: IssueType; icon: string; label: string; sub: string }[] = [
+    { type: 'missing',    icon: '▣', label: 'Missing',    sub: 'Stock not available' },
+    { type: 'damaged',    icon: '▧', label: 'Damaged',    sub: 'Cannot dispatch'     },
+    { type: 'wrong_item', icon: '△', label: 'Wrong item', sub: 'Incorrect SKU'       },
+  ];
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [issueType, setIssueType] = useState<IssueType>('missing');
+  const [affectedQty, setAffectedQty] = useState(6);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handlePhoto = (e: { target: HTMLInputElement }) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setPhotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+  const actualQty = EXPECTED - affectedQty;
+  const issueLabel = issueOptions.find(o => o.type === issueType)?.label ?? 'Missing';
+  const unitLabel = issueType === 'wrong_item' ? 'Wrong units' : issueType === 'damaged' ? 'Damaged units' : 'Units missing';
+  const submit = async () => {
+    const tripId = localStorage.getItem('waypoint.loader.trip-id');
+    const stopId  = localStorage.getItem('waypoint.loader.stop-id');
+    if (!tripId || !stopId) { setError('Open a backend trip before recording a shortfall.'); return; }
+    if (affectedQty < 1) { setError('Affected quantity must be at least 1.'); return; }
+    setBusy(true); setError('');
+    try {
+      await recordShortfall(tripId, stopId, {
+        issue_type: issueType,
+        sku: 'FRESH-MLK-001',
+        description: 'Anchor Full Cream Milk 1L',
+        expected_quantity: EXPECTED,
+        actual_quantity: issueType === 'wrong_item' ? (EXPECTED - affectedQty) : actualQty,
+        notes: notes || undefined,
+      });
+      notify(`${issueLabel} recorded — ${affectedQty} unit${affectedQty !== 1 ? 's' : ''}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Shortfall could not be recorded.');
+    } finally { setBusy(false); }
+  };
+  return <div className="narrow">
+    <div className="banner warning">Record the affected quantity before the vehicle leaves.</div>
+    {error && <div className="banner critical">{error}</div>}
+
+    {/* Step 1 */}
+    <Panel>
+      <span className="overline">STEP 1 · ISSUE TYPE</span>
+      <div className="choice-grid">
+        {issueOptions.map(o => (
+          <button key={o.type} className={issueType === o.type ? 'selected' : ''} onClick={() => setIssueType(o.type)}>
+            {o.icon}<b>{o.label}</b><small>{o.sub}</small>
+          </button>
+        ))}
+      </div>
+    </Panel>
+
+    {/* Step 2 */}
+    <Panel>
+      <span className="overline">STEP 2 · AFFECTED ITEM</span>
+      <h3>Anchor Full Cream Milk 1L</h3>
+      <p className="muted">Expected {EXPECTED} units · {issueType !== 'wrong_item' ? `Received ${actualQty} units · ` : ''}Gampola stop</p>
+      <div className="quantity" style={{ alignItems: 'center', gap: 12 }}>
+        <span>{unitLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="secondary" style={{ width: 36, height: 36, padding: 0, fontSize: 20, lineHeight: 1 }}
+            onClick={() => setAffectedQty(q => Math.max(1, q - 1))}>−</button>
+          <b style={{ minWidth: 28, textAlign: 'center', fontSize: 20 }}>{affectedQty}</b>
+          <button className="secondary" style={{ width: 36, height: 36, padding: 0, fontSize: 20, lineHeight: 1 }}
+            onClick={() => setAffectedQty(q => Math.min(EXPECTED, q + 1))}>+</button>
+        </div>
+      </div>
+    </Panel>
+
+    {/* Evidence */}
+    <Panel>
+      <span className="overline">EVIDENCE</span>
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handlePhoto} />
+      {photoPreview
+        ? <div className="photo photo-preview" onClick={() => fileInputRef.current?.click()} style={{ cursor: 'pointer', padding: 0, overflow: 'hidden' }}>
+            <img src={photoPreview} alt="Evidence" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8 }} />
+            <span style={{ display: 'block', textAlign: 'center', padding: '6px 0', fontSize: 12, color: 'var(--muted)' }}>Tap to change photo</span>
+          </div>
+        : <div className="photo" style={{ cursor: 'pointer' }} onClick={() => fileInputRef.current?.click()}>⌾<span>Attach photo of empty crate / shelf</span></div>
+      }
+      <textarea placeholder="Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} />
+    </Panel>
+
+    <button className="primary full" disabled={busy} onClick={() => void submit()}>
+      {busy ? 'Recording…' : `Confirm ${issueLabel.toLowerCase()} · ${affectedQty} unit${affectedQty !== 1 ? 's' : ''}`}
+    </button>
+  </div>;
+}
 function PlanChanged({ notify }: { notify: (m: string) => void }) { return <div className="narrow"><div className="critical-block"><Status tone="red">Plan changed</Status><h2>The load list has changed</h2><p>Dispatcher Perera added Midlands Supermart — Gampola before departure. Re-verify your load.</p></div><Panel><div className="meta-grid"><div><small>What</small><b>New stop added · Gampola</b></div><div><small>When</small><b>06:42 AM today</b></div><div><small>Who</small><b>Dispatcher Perera</b></div><div><small>Action</small><b>Load position 2</b></div></div></Panel><Panel className="highlight-panel"><Status tone="amber">New stop</Status><h3>Midlands Supermart — Gampola</h3><p>Anchor Milk × 12 · Maliban Crackers × 6 · Basmati × 4 · Ginger Beer × 8</p></Panel><button className="primary full" onClick={() => notify('Updated load list acknowledged')}>Acknowledge & continue</button></div> }
 export default function App() { const [profile, setProfile] = useState<UserProfile | null>(null); const [loading, setLoading] = useState(true); useEffect(() => { const client = supabase; if (!client) { setLoading(false); return; } const load = async () => { try { const session = (await client.auth.getSession()).data.session; if (session) setProfile(await getCurrentUser()); } finally { setLoading(false); } }; void load(); const { data } = client.auth.onAuthStateChange((_event, session) => { if (!session) setProfile(null); }); return () => data.subscription.unsubscribe(); }, []); if (loading) return <div className="loading-screen">Loading your Waypoint session…</div>; if (!profile) return <Auth onSignedIn={setProfile} />; return <Shell role={displayRole(profile.role)} profile={profile} onSignOut={async () => { await signOut(); setProfile(null); }} />; }

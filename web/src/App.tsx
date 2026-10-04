@@ -16,12 +16,98 @@ const stops = ['Highland Mart — Kandy', 'Green Valley Store — Peradeniya', '
 const roleScreens: Record<Role, Screen[]> = { 'Store Manager': ['Orders', 'Confirmed', 'Deferral', 'Receipt'], Dispatcher: ['Queue', 'Allocate', 'Board', 'Capacity'], Loader: ['Load list', 'Shortfall', 'Plan changed'], Driver: ['Board'] };
 const displayRole = (role: UserProfile['role']): Role => ({ store_manager: 'Store Manager', dispatcher: 'Dispatcher', loader: 'Loader', driver: 'Driver' })[role] as Role;
 
-const demoAccounts = [
-  { email: 'dispatcher@waypoint.lk', role: 'Dispatcher', name: 'Sunil Jayawardena', hint: 'Control Tower' },
-  { email: 'loader@waypoint.lk', role: 'Loader', name: 'Kamal Perera', hint: 'Peliyagoda Bay' },
-  { email: 'storemanager@waypoint.lk', role: 'Store Manager', name: 'Nimal Fernando', hint: 'Outlet OUT001' },
-  { email: 'driver@waypoint.lk', role: 'Driver', name: 'Ruwan Silva', hint: 'WP-CAB-9241' },
+interface WebRoleCard {
+  key: 'dispatcher' | 'loader' | 'store_manager';
+  role: Role;
+  name: string;
+  email: string;
+  title: string;
+  icon: string;
+  badgeTone: 'cyan' | 'amber' | 'emerald';
+  hint: string;
+  workspacesCount: number;
+  workspaces: string[];
+  description: string;
+  assignment: string;
+}
+
+const WEB_ROLES: WebRoleCard[] = [
+  {
+    key: 'dispatcher',
+    role: 'Dispatcher',
+    name: 'Sunil Jayawardena',
+    email: 'dispatcher@waypoint.lk',
+    title: 'Dispatcher',
+    icon: '◈',
+    badgeTone: 'cyan',
+    hint: 'Control Tower · 4 workspaces',
+    workspacesCount: 4,
+    workspaces: ['Order Queue', 'Plan & Allocate', 'Live Board', 'Capacity Outlook'],
+    description: 'Constraint-aware fleet planning, route optimization & dispatch control',
+    assignment: 'Control Tower · Peliyagoda & Kandy',
+  },
+  {
+    key: 'loader',
+    role: 'Loader',
+    name: 'Kamal Perera',
+    email: 'loader@waypoint.lk',
+    title: 'Loader',
+    icon: '▤',
+    badgeTone: 'amber',
+    hint: 'Peliyagoda Bay · 3 workspaces',
+    workspacesCount: 3,
+    workspaces: ['Load List', 'Flag Shortfall', 'Plan Changed'],
+    description: 'Reverse-unload pallet sequencing & depot loading verification',
+    assignment: 'Depot Loading Bay 4 · Peliyagoda',
+  },
+  {
+    key: 'store_manager',
+    role: 'Store Manager',
+    name: 'Nimal Fernando',
+    email: 'storemanager@waypoint.lk',
+    title: 'Store Manager',
+    icon: '＋',
+    badgeTone: 'emerald',
+    hint: 'Outlet OUT001 · 4 workspaces',
+    workspacesCount: 4,
+    workspaces: ['Place Order', 'Confirmed Orders', 'Deferral Notices', 'Confirm Receipt'],
+    description: 'Daily order submissions, cutoff tracking & verified delivery sign-offs',
+    assignment: 'Assigned Outlet OUT001 · Highland Mart',
+  },
 ];
+
+const EyeIcon = ({ open }: { open: boolean }) => open ? (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+) : (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </svg>
+);
+
+const UserIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 6 }}>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const MailIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 6 }}>
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+    <polyline points="22,6 12,13 2,6" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: 6 }}>
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
 
 function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
@@ -35,14 +121,20 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [activeAccount, setActiveAccount] = useState<string | null>(null);
+  const [selectedRoleKey, setSelectedRoleKey] = useState<'dispatcher' | 'loader' | 'store_manager'>('dispatcher');
 
   const configuredError = apiConfigError();
 
-  // Role is automatically detected from email — user role text input is NOT needed
   const detectedRole = detectRoleFromEmail(email);
-  const roleMeta = getRoleMeta(detectedRole);
   const hasEmail = email.trim().length > 0;
+
+  // Active role key for UI highlighting (matches typed email if provided, otherwise matches selectedRoleKey)
+  const activeRoleKey: 'dispatcher' | 'loader' | 'store_manager' = hasEmail
+    ? (detectedRole === 'driver' ? 'dispatcher' : (detectedRole as 'dispatcher' | 'loader' | 'store_manager'))
+    : selectedRoleKey;
+
+  const currentRoleMeta = getRoleMeta(activeRoleKey);
+  const activeRoleCard = WEB_ROLES.find(r => r.key === activeRoleKey) || WEB_ROLES[0];
 
   // Real-time password strength calculation for registration
   const getStrengthScore = (pw: string) => {
@@ -97,7 +189,7 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
         const user = await getCurrentUser();
         onSignedIn(user);
       } catch {
-        setSuccessMsg(`Account created successfully for ${fullName}! Your role is configured as ${roleMeta.displayTitle}. You can now sign in.`);
+        setSuccessMsg(`Account created successfully for ${fullName}! Your role is configured as ${currentRoleMeta.displayTitle}. You can now sign in.`);
         setMode('signin');
       }
     } catch (e) {
@@ -107,12 +199,12 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
     }
   };
 
-  const quickFill = (account: typeof demoAccounts[0]) => {
-    setEmail(account.email);
-    setPassword('waypoint123');
-    setConfirmPassword('waypoint123');
-    setFullName(account.name);
-    setActiveAccount(account.email);
+  const handleSelectRole = (r: WebRoleCard) => {
+    setSelectedRoleKey(r.key);
+    setEmail(r.email);
+    setPassword('WaypointDemo2026!');
+    setConfirmPassword('WaypointDemo2026!');
+    setFullName(r.name);
     setError('');
   };
 
@@ -120,32 +212,55 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
     <main className="auth">
       <div className="auth-art">
         <div className="brand-mark">W</div>
-        <p className="eyebrow">WAYPOINT FRESH LOGISTICS</p>
+        <div className="brand-header-strip">
+          <p className="eyebrow">WAYPOINT FRESH LOGISTICS</p>
+          <span className="live-pill"><i /> LIVE CONSOLE</span>
+        </div>
         <h1>Move the morning<br /><em>with confidence.</em></h1>
         <p className="muted light">
           Constraint-aware fleet planning, reverse-load pallet sequencing, and verified store delivery receipts.
         </p>
 
+        {/* 3 Operational Web Roles: Dispatcher, Loader, Store Manager */}
         <div className="hero-role-previews">
-          {demoAccounts.map(acc => {
-            const accMeta = getRoleMeta(detectRoleFromEmail(acc.email));
-            const isMatch = detectedRole === accMeta.role;
+          {WEB_ROLES.map(r => {
+            const isMatch = activeRoleKey === r.key;
             return (
               <button
-                key={acc.email}
+                key={r.key}
                 type="button"
-                className={`hero-role-card ${isMatch ? 'active' : ''}`}
-                onClick={() => quickFill(acc)}
+                className={`hero-role-card role-tone-${r.badgeTone} ${isMatch ? 'active' : ''}`}
+                onClick={() => handleSelectRole(r)}
+                aria-pressed={isMatch}
               >
-                <strong>{accMeta.icon} {acc.role}</strong>
-                <span>{acc.hint} · {accMeta.screens.length} workspaces</span>
+                <div className="hero-card-header">
+                  <span className="hero-role-icon">{r.icon}</span>
+                  <strong>{r.title}</strong>
+                  {isMatch && <span className="active-dot-pulse" />}
+                  {isMatch && <span className="hero-active-pill">Selected</span>}
+                </div>
+                <div className="hero-card-sub">
+                  <span>{r.hint}</span>
+                </div>
+                <p className="hero-card-desc">{r.description}</p>
+                <div className="hero-role-tags">
+                  {r.workspaces.map(w => (
+                    <span key={w} className="hero-tag">{w}</span>
+                  ))}
+                </div>
               </button>
             );
           })}
         </div>
 
         <div className="route-art">
-          <span>DC Peliyagoda</span><i /><span>01 Kandy</span><i /><span>02 Peradeniya</span><i /><span>03 Gampola</span>
+          <span className="route-stop"><i className="route-dot pulse" /> DC Peliyagoda</span>
+          <i className="route-connector" />
+          <span className="route-stop"><i className="route-dot" /> 01 Kandy</span>
+          <i className="route-connector" />
+          <span className="route-stop"><i className="route-dot" /> 02 Peradeniya</span>
+          <i className="route-connector" />
+          <span className="route-stop"><i className="route-dot" /> 03 Gampola</span>
         </div>
       </div>
 
@@ -172,7 +287,7 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
         <p className="muted">
           {mode === 'signin'
             ? 'Access your role-based logistics dashboard with your credentials.'
-            : 'Register your account. Your operational role is automatically detected by your email.'}
+            : 'Register your account for real-time dispatch, bay, or store operations.'}
         </p>
 
         {successMsg && (
@@ -185,29 +300,31 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
           </div>
         )}
 
-        <div className="role-hints">
-          <p className="role-hints-label">
-            <span>Quick fill demo accounts:</span>
-            <small>Click to auto-fill</small>
-          </p>
-          <div className="role-hint-chips">
-            {demoAccounts.map(a => (
-              <button
-                key={a.email}
-                type="button"
-                className={`role-chip ${activeAccount === a.email ? 'active' : ''}`}
-                onClick={() => quickFill(a)}
-              >
-                <span className="role-chip-dot" />
-                {a.email}
-              </button>
-            ))}
+        {/* Interactive Role Switcher Pills (Driver removed, no demo auto-fill text) */}
+        <div className="role-selector-bar">
+          <span className="selector-title">SELECT OPERATIONAL STATION</span>
+          <div className="role-selector-pills">
+            {WEB_ROLES.map(r => {
+              const isSelected = activeRoleKey === r.key;
+              return (
+                <button
+                  key={r.key}
+                  type="button"
+                  className={`role-select-pill ${isSelected ? `active tone-${r.badgeTone}` : ''}`}
+                  onClick={() => handleSelectRole(r)}
+                >
+                  <span className="pill-icon">{r.icon}</span>
+                  <span>{r.title}</span>
+                  {isSelected && <span className="pill-check">✓</span>}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {mode === 'register' && (
           <label>
-            Full name
+            <span className="label-heading"><UserIcon /> Full name</span>
             <input
               value={fullName}
               onChange={e => setFullName(e.target.value)}
@@ -219,42 +336,34 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
         )}
 
         <label>
-          Email address
+          <span className="label-heading"><MailIcon /> Email address</span>
           <input
             value={email}
-            onChange={e => {
-              setEmail(e.target.value);
-              setActiveAccount(null);
-            }}
-            placeholder="you@waypoint.lk (e.g. dispatcher@, loader@, driver@, store@)"
+            onChange={e => setEmail(e.target.value)}
+            placeholder="you@waypoint.lk (e.g. dispatcher@, loader@, store@)"
             type="email"
             autoComplete="email"
           />
         </label>
 
-        {/* Live Role Detection Display — NO manual role input/text required! */}
-        {hasEmail ? (
-          <div className={`role-detector role-${detectedRole}`}>
+        {/* Interactive Live Role Card (Only shown when email is present - NO annoying fallback guide prompt!) */}
+        {hasEmail && (
+          <div className={`role-detector role-${activeRoleKey}`}>
             <div className="role-detector-head">
-              <span className="role-tag-badge">{roleMeta.icon} {roleMeta.displayTitle}</span>
-              <span className="role-chip-dot" style={{ display: 'inline-block' }} />
+              <span className="role-tag-badge">{currentRoleMeta.icon} {currentRoleMeta.displayTitle} Station</span>
+              <span className="live-status-pill"><i className="status-dot" /> Active</span>
             </div>
-            <p className="role-detector-desc">{roleMeta.description}</p>
+            <p className="role-detector-desc">{currentRoleMeta.description}</p>
             <div className="role-detector-meta">
-              <span><b>Workspace:</b> {roleMeta.tagline}</span>
+              <span><b>Station:</b> {currentRoleMeta.tagline}</span>
               <span>·</span>
-              <span><b>Node:</b> {roleMeta.assignment}</span>
+              <span><b>Node:</b> {currentRoleMeta.assignment}</span>
             </div>
-          </div>
-        ) : (
-          <div className="role-guide-hint">
-            <span>💡</span>
-            <span><b>Role auto-detection:</b> Your system role (Dispatcher, Loader, Driver, Store Manager) is detected automatically from your email. No manual role selection required.</span>
           </div>
         )}
 
         <label>
-          Password
+          <span className="label-heading"><LockIcon /> Password</span>
           <div className="password-wrap">
             <input
               value={password}
@@ -275,7 +384,7 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
               onClick={() => setShowPassword(!showPassword)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              {showPassword ? '◉' : '○'}
+              <EyeIcon open={showPassword} />
             </button>
           </div>
         </label>
@@ -297,7 +406,7 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
 
         {mode === 'register' && (
           <label>
-            Confirm password
+            <span className="label-heading"><LockIcon /> Confirm password</span>
             <div className="password-wrap">
               <input
                 value={confirmPassword}
@@ -315,7 +424,7 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
               >
-                {showConfirmPassword ? '◉' : '○'}
+                <EyeIcon open={showConfirmPassword} />
               </button>
             </div>
             {passwordsMatch && (
@@ -343,12 +452,19 @@ function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
           disabled={busy || !email || !password || (mode === 'register' && (!fullName || !confirmPassword || passwordsMismatch))}
           onClick={mode === 'signin' ? handleLogin : handleRegister}
         >
-          {busy
-            ? (mode === 'signin' ? 'Signing in…' : 'Creating account…')
-            : (mode === 'signin'
-                ? `Sign in as ${hasEmail ? roleMeta.displayTitle : 'staff'}`
-                : `Register as ${hasEmail ? roleMeta.displayTitle : 'staff'}`)
-          } <span>→</span>
+          {busy ? (
+            <span className="btn-loading">
+              <span className="spinner" />
+              {mode === 'signin' ? 'Signing in…' : 'Creating account…'}
+            </span>
+          ) : (
+            <span>
+              {mode === 'signin'
+                ? `Sign in to ${activeRoleCard.title} Workspace`
+                : `Register as ${activeRoleCard.title} Staff`}{' '}
+              <span className="btn-arrow">→</span>
+            </span>
+          )}
         </button>
 
         <div className="auth-footer-toggle">

@@ -44,7 +44,7 @@ class VehicleRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     def list_by_depot(self, depot: str) -> list[dict]:
         """Return all vehicles for a depot — used by the allocation engine."""

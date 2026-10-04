@@ -33,7 +33,7 @@ class DeliveryRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     def get_delivery_by_stop(self, trip_stop_id: str) -> dict | None:
         """Return the delivery record for a stop, or None if not yet recorded."""
@@ -44,7 +44,7 @@ class DeliveryRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     def get_delivery_by_operation_id(self, operation_id: str) -> dict | None:
         """Look up by the client's idempotency key."""
@@ -55,7 +55,7 @@ class DeliveryRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     def create_delivery(self, payload: dict) -> dict:
         resp = self._db.table(self.DELIVERIES_TABLE).insert(payload).execute()
@@ -82,7 +82,7 @@ class DeliveryRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     def create_pod(self, payload: dict) -> dict:
         resp = self._db.table(self.POD_TABLE).insert(payload).execute()
@@ -124,7 +124,7 @@ class DeliveryRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     def create_receipt(self, payload: dict) -> dict:
         resp = self._db.table(self.RECEIPTS_TABLE).insert(payload).execute()

@@ -78,7 +78,7 @@ class SyncRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     # ─────────────────────────────────────────────────────────────────────────
     # Update: mark outcome

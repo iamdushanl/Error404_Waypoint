@@ -117,7 +117,7 @@ async def record_delivery(
         .maybe_single()
         .execute()
     )
-    if not stop_resp.data:
+    if not stop_resp or not stop_resp.data:
         raise HTTPException(status_code=404, detail="Trip stop not found.")
 
     stop = stop_resp.data
@@ -409,7 +409,7 @@ async def confirm_receipt(
         .maybe_single()
         .execute()
     )
-    if not stop_resp.data:
+    if not stop_resp or not stop_resp.data:
         raise HTTPException(status_code=404, detail="Associated trip stop not found.")
 
     order_id = stop_resp.data["order_id"]
@@ -486,21 +486,22 @@ async def record_shortfall(
         .maybe_single()
         .execute()
     )
-    if not stop_resp.data:
+    if not stop_resp or not stop_resp.data:
         raise HTTPException(status_code=404, detail="Trip stop not found.")
 
     stop = stop_resp.data
     trip_status = stop.get("trips", {}).get("status")
 
-    # Shortfalls only while loading
-    if trip_status != "loading":
+    # Shortfalls only before departure (while loading or planned)
+    if trip_status not in ("loading", "planned"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
                 f"Trip is in status '{trip_status}'. "
-                "Shortfalls can only be recorded while the trip is loading."
+                "Shortfalls can only be recorded while the trip is loading or planned (before vehicle departs)."
             ),
         )
+
 
     # actual_quantity must be less than expected
     if body.actual_quantity >= body.expected_quantity:

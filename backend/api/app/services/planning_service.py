@@ -359,14 +359,23 @@ class PlanningService:
         """
         resp = (
             self._db.table("delivery_plans")
-            .select("id")
+            .select("id, status")
             .eq("plan_date", str(plan_date))
             .eq("depot", depot)
             .maybe_single()
             .execute()
         )
-        if resp.data:
-            return resp.data["id"]
+        if resp and resp.data:
+            plan_status = resp.data.get("status", "draft")
+            if plan_status != "draft":
+                raise ValueError(
+                    f"A '{plan_status}' delivery plan already exists for {plan_date} at {depot}. "
+                    "Cannot regenerate an already confirmed or completed plan."
+                )
+            plan_id = resp.data["id"]
+            self._db.table("deferred_orders").delete().eq("plan_id", plan_id).execute()
+            self._db.table("trips").delete().eq("plan_id", plan_id).execute()
+            return plan_id
 
         create_resp = self._db.table("delivery_plans").insert({
             "plan_date": str(plan_date),

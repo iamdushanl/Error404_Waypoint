@@ -17,8 +17,8 @@ The system supports four user roles: **Dispatcher**, **Loader**, **Driver**, and
 ```mermaid
 graph TB
     subgraph Clients
-        Web["Web App\napps/web\nReact + TypeScript\nHosted: Vercel"]
-        Mobile["Driver Mobile App\napps/mobile\nReact Native"]
+        Web["Web App\nweb/\nReact + TypeScript\nHosted: Vercel"]
+        Mobile["Driver Mobile App\nmobile/\nReact + TypeScript"]
     end
 
     subgraph Backend["Backend (AWS Container)"]

@@ -132,11 +132,11 @@ See [`docs/api-contract.md`](../../docs/api-contract.md) for full request/respon
 |---|---|---|
 | 0 | Repository audit | ✅ Done |
 | 1 | FastAPI foundation, `/health`, config, CORS, Dockerfile | ✅ Done |
-| 2 | Supabase connection, migrations, seed data | 🔜 Next |
-| 3 | JWT auth, `get_current_user`, role guards, `/auth/me` | ⏳ |
-| 4 | Domain model: outlets, vehicles, orders, trips | ⏳ |
-| 5 | Allocation engine + planning API | ⏳ |
-| 6 | Delivery workflow (complete, POD, receipt, shortfall) | ⏳ |
-| 7 | Offline sync (idempotent, keyed) | ⏳ |
-| 8 | Frontend/mobile integration | ⏳ |
-| 9 | Docker compose full stack + seed | ⏳ |
+| 2 | Supabase connection, migrations, seed data | ✅ Done |
+| 3 | JWT auth, `get_current_user`, role guards, `/auth/me` | ✅ Done |
+| 4 | Domain model: outlets, vehicles, orders, trips | ✅ Done |
+| 5 | Allocation engine + planning API | ✅ Done |
+| 6 | Delivery workflow (complete, POD, receipt, shortfall) | ✅ Done |
+| 7 | Offline sync (idempotent, keyed) | ✅ Done |
+| 8 | Frontend/mobile integration | ✅ Done |
+| 9 | Docker compose full stack + seed | ✅ Done |

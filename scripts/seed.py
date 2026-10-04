@@ -158,33 +158,76 @@ def seed_calendar(client: Client, data_dir: Path) -> int:
 
 DEMO_USERS = [
     {
-        "email":     "dispatcher@waypoint.demo",
-        "password":  "WaypointDemo2026!",
-        "full_name": "Dispatcher Perera",
+        "email":     "storemanager@waypoint.lk",
+        "password":  "waypoint123",
+        "full_name": "Nimal Fernando",
+        "role":      "store_manager",
+        "outlet_id": "OUT001",
+        "depot":     None,
+        "vehicle_id": None,
+    },
+    {
+        "email":     "dispatcher@waypoint.lk",
+        "password":  "waypoint123",
+        "full_name": "Sunil Jayawardena",
         "role":      "dispatcher",
         "depot":     "Peliyagoda",
+        "outlet_id": None,
+        "vehicle_id": None,
     },
     {
-        "email":     "loader@waypoint.demo",
-        "password":  "WaypointDemo2026!",
-        "full_name": "Loader Nimal",
+        "email":     "loader@waypoint.lk",
+        "password":  "waypoint123",
+        "full_name": "Kamal Perera",
         "role":      "loader",
         "depot":     "Peliyagoda",
+        "outlet_id": None,
+        "vehicle_id": None,
     },
     {
-        "email":     "driver@waypoint.demo",
-        "password":  "WaypointDemo2026!",
-        "full_name": "Rohan Silva",
+        "email":     "driver@waypoint.lk",
+        "password":  "waypoint123",
+        "full_name": "Ruwan Silva",
         "role":      "driver",
         "depot":     "Peliyagoda",
-        "vehicle_id": None,  # assigned once vehicles are seeded
+        "outlet_id": None,
+        "vehicle_id": "VEH035",
     },
     {
         "email":     "manager@waypoint.demo",
-        "password":  "WaypointDemo2026!",
+        "password":  "waypoint123",
         "full_name": "Store Manager Kumari",
         "role":      "store_manager",
-        "outlet_id": "OUT001",  # first outlet — update after reviewing outlets.csv
+        "outlet_id": "OUT001",
+        "depot":     None,
+        "vehicle_id": None,
+    },
+    {
+        "email":     "dispatcher@waypoint.demo",
+        "password":  "waypoint123",
+        "full_name": "Dispatcher Perera",
+        "role":      "dispatcher",
+        "depot":     "Peliyagoda",
+        "outlet_id": None,
+        "vehicle_id": None,
+    },
+    {
+        "email":     "loader@waypoint.demo",
+        "password":  "waypoint123",
+        "full_name": "Loader Nimal",
+        "role":      "loader",
+        "depot":     "Peliyagoda",
+        "outlet_id": None,
+        "vehicle_id": None,
+    },
+    {
+        "email":     "driver@waypoint.demo",
+        "password":  "waypoint123",
+        "full_name": "Rohan Silva",
+        "role":      "driver",
+        "depot":     "Peliyagoda",
+        "outlet_id": None,
+        "vehicle_id": "VEH035",
     },
 ]
 
@@ -197,28 +240,45 @@ def seed_users(client: Client) -> int:
     Note: Supabase Admin API is required to create auth users server-side.
     """
     created = 0
+    users_list = []
+    try:
+        users_list = client.auth.admin.list_users()
+    except Exception as e:
+        log.warning("Could not list auth users: %s", e)
+
     for u in DEMO_USERS:
-        # 1. Create (or get existing) Supabase Auth user
-        try:
-            auth_response = client.auth.admin.create_user({
-                "email": u["email"],
-                "password": u["password"],
-                "email_confirm": True,  # skip email verification for demo
-                "user_metadata": {"full_name": u["full_name"]},
-            })
-            auth_user_id = auth_response.user.id
-            log.info("Auth user created: %s (%s)", u["email"], auth_user_id)
-        except Exception as e:
-            # User may already exist — try to find them
-            log.warning("Could not create auth user %s: %s — may already exist", u["email"], e)
-            # Attempt to look up by email in users table
-            existing = client.table("users").select("id").eq("email", u["email"]).maybe_single().execute()
-            if existing.data:
-                auth_user_id = existing.data["id"]
-                log.info("Found existing user: %s (%s)", u["email"], auth_user_id)
-            else:
-                log.error("Cannot create or find user %s — skipping", u["email"])
-                continue
+        auth_user_id = None
+        existing_auth = next((x for x in users_list if x.email == u["email"]), None)
+        if existing_auth:
+            auth_user_id = existing_auth.id
+            try:
+                client.auth.admin.update_user_by_id(auth_user_id, {
+                    "password": u["password"],
+                    "email_confirm": True,
+                })
+                log.info("Updated password for auth user: %s (%s)", u["email"], auth_user_id)
+            except Exception as e:
+                log.warning("Could not update auth user password for %s: %s", u["email"], e)
+        else:
+            # 1. Create Supabase Auth user
+            try:
+                auth_response = client.auth.admin.create_user({
+                    "email": u["email"],
+                    "password": u["password"],
+                    "email_confirm": True,  # skip email verification for demo
+                    "user_metadata": {"full_name": u["full_name"]},
+                })
+                auth_user_id = auth_response.user.id
+                log.info("Auth user created: %s (%s)", u["email"], auth_user_id)
+            except Exception as e:
+                log.warning("Could not create auth user %s: %s", u["email"], e)
+                existing = client.table("users").select("id").eq("email", u["email"]).maybe_single().execute()
+                if existing.data:
+                    auth_user_id = existing.data["id"]
+                    log.info("Found existing user in table: %s (%s)", u["email"], auth_user_id)
+                else:
+                    log.error("Cannot create or find user %s — skipping", u["email"])
+                    continue
 
         # 2. Upsert application user profile
         profile = {
@@ -229,12 +289,14 @@ def seed_users(client: Client) -> int:
             "outlet_id":  u.get("outlet_id"),
             "depot":      u.get("depot"),
             "vehicle_id": u.get("vehicle_id"),
+            "is_active":   True,
         }
         client.table("users").upsert(profile, on_conflict="id").execute()
         log.info("User profile upserted: %s [%s]", u["full_name"], u["role"])
         created += 1
 
     return created
+
 
 
 # ════════════════════════════════════════════════════════════

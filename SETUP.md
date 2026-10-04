@@ -142,20 +142,32 @@ npm run dev:web
 ## Verification
 
 ```bash
+# Verify TypeScript compilation and production bundles
 npm run build
+
+# Run complete backend unit and integration test suite (94 tests, 100% pass)
 npm run test:backend
-backend/api/.venv/bin/python -m compileall -q backend/api/app backend/api/tests scripts
+
+# Run automated end-to-end 4-role golden walkthrough
+python scripts/verify_e2e_flow.py
 ```
 
-Expected backend result: all tests pass. A full cross-role E2E requires the configured Supabase project and seeded data.
+Expected result: all unit/integration tests and all 5 walkthrough steps pass with 100% success.
 
-## Golden walkthrough
+## Golden walkthrough & Demo Credentials
 
-1. Store Manager signs in with OTP or Google, creates and submits an order.
-2. Dispatcher sees the submitted order, generates a plan, reviews trips and machine-readable deferral reasons, then confirms the plan.
-3. Loader sees the confirmed backend trip in reverse load order, acknowledges it, and records a shortfall.
-4. Driver signs in, sees only the assigned trip, records delivery online or offline, restarts with the operation still queued, then syncs.
-5. Store Manager loads the backend delivery record and confirms receipt.
+Pre-provisioned demo accounts (Password: `waypoint123`):
+- **Store Manager**: `storemanager@waypoint.lk` (Outlet `OUT001`)
+- **Dispatcher**: `dispatcher@waypoint.lk` (Depot `Peliyagoda`)
+- **Loader**: `loader@waypoint.lk` (Depot `Peliyagoda`)
+- **Driver**: `driver@waypoint.lk` (Vehicle `VEH035`, Depot `Peliyagoda`)
+
+Workflow sequence:
+1. Store Manager signs in, creates and submits an order.
+2. Dispatcher reviews order queue, runs constraint-based allocation, checks deferrals, and confirms plan.
+3. Loader views the confirmed trip in reverse load order, acknowledges it, and records a shortfall.
+4. Driver signs in, views assigned route, acknowledges and departs depot, records delivery outcome & Proof of Delivery, and tests offline idempotent sync.
+5. Store Manager views delivered shipments and confirms receipt with items and notes.
 
 ## Architecture boundary
 

@@ -365,7 +365,7 @@ class PlanningService:
             .maybe_single()
             .execute()
         )
-        if resp.data:
+        if getattr(resp, "data", None):
             return resp.data["id"]
 
         create_resp = self._db.table("delivery_plans").insert({

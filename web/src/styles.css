@@ -16,3 +16,16 @@
 .pin-key:disabled{opacity:.35;cursor:not-allowed}
 .pin-del{background:#fff3d9;border-color:#e9cfa0;color:#a66013;font-size:18px}
 .pin-del:hover{background:#ffe9b5 !important;border-color:#c9961a !important}
+/* ── Email + Password Login ────────────────────────────── */
+.role-hints{margin-bottom:22px}
+.role-hints-label{font-size:11px;font-weight:700;letter-spacing:.1em;color:#80908b;text-transform:uppercase;margin-bottom:10px}
+.role-hint-chips{display:flex;flex-wrap:wrap;gap:8px}
+.role-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;background:#f0f7f3;border:1px solid #c8ddd2;border-radius:20px;color:#1a6b52;font-size:12px;font-weight:600;transition:all .15s ease;cursor:pointer}
+.role-chip:hover{background:#d9f3e7;border-color:#7cc5a0;transform:translateY(-1px);box-shadow:0 3px 10px #1a6b5215}
+.role-chip-dot{width:7px;height:7px;border-radius:50%;background:#6fe1ad;box-shadow:0 0 0 3px #6fe1ad30}
+.password-wrap{position:relative;display:flex;align-items:center}
+.password-wrap input{flex:1;padding-right:42px}
+.pw-toggle{position:absolute;right:6px;width:32px;height:32px;border-radius:4px;background:transparent;color:#80908b;font-size:16px;display:grid;place-items:center;transition:color .15s}
+.pw-toggle:hover{color:#123c36}
+.error-text{color:var(--red);display:block;margin-top:14px;line-height:1.5}
+.loading-screen{min-height:100vh;display:grid;place-items:center;font-size:15px;color:#80908b;font-family:'DM Sans',sans-serif}

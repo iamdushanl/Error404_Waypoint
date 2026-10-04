@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SwipeToAction } from './components/SwipeToAction';
 import { apiConfigError } from './api/client';
-import { getCurrentUser, signInWithGoogle, signInWithOtp, signOut, verifyOtp } from './api/auth';
+import { getCurrentUser, signInWithPassword, signOut } from './api/auth';
 import { supabase } from './api/supabase';
 import type { UserProfile } from './api/types';
 import { createOrder, listOrders, submitOrder } from './api/orders';
@@ -16,19 +16,40 @@ const stops = ['Highland Mart — Kandy', 'Green Valley Store — Peradeniya', '
 const roleScreens: Record<Role, Screen[]> = { 'Store Manager': ['Orders', 'Confirmed', 'Deferral', 'Receipt'], Dispatcher: ['Queue', 'Allocate', 'Board', 'Capacity'], Loader: ['Load list', 'Shortfall', 'Plan changed'], Driver: ['Board'] };
 const displayRole = (role: UserProfile['role']): Role => ({ store_manager: 'Store Manager', dispatcher: 'Dispatcher', loader: 'Loader', driver: 'Driver' })[role] as Role;
 
+const roleAccounts = [
+  { role: 'Loader', email: 'loader@waypoint.lk' },
+  { role: 'Store Manager', email: 'storemanager@waypoint.lk' },
+  { role: 'Dispatcher', email: 'dispatcher@waypoint.lk' },
+  { role: 'Driver', email: 'driver@waypoint.lk' },
+];
+
 function Auth({ onSignedIn }: { onSignedIn: (profile: UserProfile) => void }) {
-  const [contact, setContact] = useState('');
-  const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const configuredError = apiConfigError();
-  const resolveProfile = async () => onSignedIn(await getCurrentUser());
-  const sendCode = async () => { setBusy(true); setError(''); try { await signInWithOtp(contact); setSent(true); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to send one-time code.'); } finally { setBusy(false); } };
-  const verifyCode = async () => { setBusy(true); setError(''); try { await verifyOtp(contact, code); await resolveProfile(); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to verify code.'); } finally { setBusy(false); } };
-  const google = async () => { setBusy(true); setError(''); try { await signInWithGoogle(); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to start Google sign-in.'); setBusy(false); } };
 
-  return <main className="auth"><div className="auth-art"><div className="brand-mark">W</div><p className="eyebrow">WAYPOINT FRESH</p><h1>Move the morning<br /><em>with confidence.</em></h1><p className="muted light">One operational rhythm from outlet order to confirmed receipt.</p><div className="route-art"><span>DC</span><i /><span>01</span><i /><span>02</span><i /><span>03</span></div></div><section className="auth-card"><p className="eyebrow">CONTROL TOWER</p><h2>{sent ? 'Enter your one-time code' : 'Sign in without a password'}</h2><p className="muted">{sent ? `Code sent to ${contact}.` : 'Use a one-time code or continue with Google.'}</p>{!sent && <button className="google" onClick={google} disabled={busy}><b>G</b> Continue with Google</button>}{!sent && <div className="or"><span>or</span></div>}<label>{sent ? 'One-time code' : 'Email or phone'}<input value={sent ? code : contact} onChange={e => sent ? setCode(e.target.value) : setContact(e.target.value)} placeholder={sent ? '123456' : 'you@company.com'} /></label>{sent ? <button className="primary full" disabled={busy || code.length < 4} onClick={verifyCode}>{busy ? 'Verifying…' : 'Verify and continue'} <span>→</span></button> : <button className="primary full" disabled={busy || !contact} onClick={sendCode}>{busy ? 'Sending…' : 'Send one-time code'} <span>→</span></button>}{configuredError && <small className="error-text">{configuredError}</small>}{error && <small className="error-text">{error}</small>}</section></main>;
+  const handleLogin = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await signInWithPassword(email, password);
+      onSignedIn(await getCurrentUser());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Sign-in failed. Check your email and password.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const quickLogin = (accountEmail: string) => {
+    setEmail(accountEmail);
+    setPassword('waypoint123');
+  };
+
+  return <main className="auth"><div className="auth-art"><div className="brand-mark">W</div><p className="eyebrow">WAYPOINT FRESH</p><h1>Move the morning<br /><em>with confidence.</em></h1><p className="muted light">One operational rhythm from outlet order to confirmed receipt.</p><div className="route-art"><span>DC</span><i /><span>01</span><i /><span>02</span><i /><span>03</span></div></div><section className="auth-card"><p className="eyebrow">CONTROL TOWER</p><h2>Sign in to your account</h2><p className="muted">Enter your email and password to continue.</p><div className="role-hints"><p className="role-hints-label">Quick login:</p><div className="role-hint-chips">{roleAccounts.map(a => <button key={a.email} className="role-chip" onClick={() => quickLogin(a.email)}><span className="role-chip-dot" />{a.role}</button>)}</div></div><label>Email<input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@waypoint.lk" type="email" /></label><label>Password<div className="password-wrap"><input value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" type={showPassword ? 'text' : 'password'} onKeyDown={e => e.key === 'Enter' && email && password && handleLogin()} /><button className="pw-toggle" type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? '◉' : '○'}</button></div></label><button className="primary full" disabled={busy || !email || !password} onClick={handleLogin}>{busy ? 'Signing in…' : 'Sign in'} <span>→</span></button>{configuredError && <small className="error-text">{configuredError}</small>}{error && <small className="error-text">{error}</small>}</section></main>;
 }
 
 function Shell({ role, profile, onSignOut }: { role: Role; profile: UserProfile; onSignOut: () => void }) { const [screen, setScreen] = useState<Screen>(roleScreens[role][0]); const [toast, setToast] = useState(''); const [qty, setQty] = useState(items.map(x => x.qty)); const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400); }; useEffect(() => setScreen(roleScreens[role][0]), [role]); return <div className="app-shell"><aside><div className="side-brand"><div className="brand-mark small">W</div><span>WAYPOINT</span></div><div className="workspace"><span className="dot" />Fresh network<strong>{role}</strong></div><nav>{roleScreens[role].map(item => <button className={item === screen ? 'active' : ''} key={item} onClick={() => setScreen(item)}><span className="nav-icon">{icon(item)}</span>{label(item)}</button>)}</nav><div className="side-bottom"><div className="network"><span className="dot" />All systems operational</div><button className="profile" onClick={onSignOut}><span className="avatar">{role[0]}</span><span><b>{profile.full_name}</b><small>Sign out</small></span><span>↗</span></button></div></aside><section className="main"><header><div><p className="eyebrow">{role.toUpperCase()} / {profile.email}</p><h1>{title(screen)}</h1></div><div className="header-actions"><span className="live"><i />Live workspace</span><button className="icon-button" onClick={() => notify('Notifications are clear')}>♡</button></div></header><div className="content">{screenView(screen, qty, setQty, notify, profile)}</div>{toast && <div className="toast">✓ {toast}</div>}</section></div> }

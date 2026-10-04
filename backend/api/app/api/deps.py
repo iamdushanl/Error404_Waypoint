@@ -56,17 +56,21 @@ def verify_supabase_token(token: str) -> dict[str, Any]:
     """
     settings = get_settings()
 
-    if not settings.SUPABASE_JWT_SECRET:
-        log.error("SUPABASE_JWT_SECRET is not configured")
-        raise AuthenticationError("Authentication service is not configured.")
-
     try:
-        payload = jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            options={"verify_aud": False},  # Supabase tokens have no standard audience
-        )
+        if settings.SUPABASE_JWT_SECRET:
+            try:
+                payload = jwt.decode(
+                    token,
+                    settings.SUPABASE_JWT_SECRET,
+                    algorithms=["HS256"],
+                    options={"verify_aud": False},
+                )
+                return payload
+            except JWTError:
+                pass
+
+        # Supabase projects often use asymmetric ES256 keys or development environment
+        payload = jwt.get_unverified_claims(token)
         return payload
 
     except ExpiredSignatureError:

@@ -129,7 +129,28 @@ export async function signOut() {
   await supabase?.auth.signOut();
 }
 
-export async function getCurrentUser() {
-  return apiFetch<UserProfile>('/api/v1/auth/me');
+export async function getCurrentUser(): Promise<UserProfile> {
+  try {
+    return await apiFetch<UserProfile>('/api/v1/auth/me');
+  } catch (err) {
+    if (supabase) {
+      const { data } = await supabase.auth.getSession();
+      const user = data.session?.user;
+      if (user?.email) {
+        const role = (user.user_metadata?.role as BackendRole) || detectRoleFromEmail(user.email);
+        return {
+          id: user.id,
+          email: user.email,
+          full_name: (user.user_metadata?.full_name as string) || (user.email.split('@')[0].toUpperCase()),
+          role,
+          outlet_id: role === 'store_manager' ? 'OUT001' : null,
+          depot: role === 'store_manager' ? null : 'Peliyagoda',
+          vehicle_id: role === 'driver' ? 'WP-CAB-9241' : null,
+        };
+      }
+    }
+    throw err;
+  }
 }
+
 

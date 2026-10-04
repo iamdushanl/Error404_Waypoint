@@ -76,10 +76,67 @@ Native driver app:
 npm run dev:native
 ```
 
-Docker API stack:
+Docker API stack only (backend + health check):
+
+```bash
+docker compose up api --build
+```
+
+## Phase 9: Docker full stack
+
+Runs **all three services** — API, web console, and seed runner — from a single command.
+
+### Prerequisites
+
+1. Docker Desktop running.
+2. Root `.env` filled in (copy from `.env.example`). Make sure these are set:
+
+```
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_JWT_SECRET=...
+VITE_SUPABASE_URL=...        # same as SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=...   # Supabase anon/public key
+VITE_API_BASE_URL=http://localhost:8000
+SEED_SKIP_CSV=0              # 1 if data/ CSVs are not present
+```
+
+3. Place confidential CSV files in `data/` (gitignored). Required by the seed runner unless `SEED_SKIP_CSV=1`.
+
+### Start the full stack
 
 ```bash
 docker compose up --build
+```
+
+Services and ports:
+
+| Service | Container name  | Host port | Notes                          |
+|---------|----------------|-----------|--------------------------------|
+| api     | waypoint-api   | 8000      | FastAPI + `/docs` + `/health` |
+| web     | waypoint-web   | 3000      | Nginx serving the Vite SPA    |
+| seed    | waypoint-seed  | —         | Exits after seeding (once)    |
+
+- **Web console**: http://localhost:3000
+- **API docs**: http://localhost:8000/docs
+- **Health**: http://localhost:8000/health
+
+### Re-run seed only (without rebuilding)
+
+```bash
+docker compose run --rm seed
+```
+
+### Backend only (for local frontend dev)
+
+```bash
+docker compose up api --build
+```
+
+Then run the frontend dev server locally:
+
+```bash
+npm run dev:web
 ```
 
 ## Verification

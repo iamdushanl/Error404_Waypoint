@@ -1,0 +1,6 @@
+# ============================================================
+# Waypoint Seed Runner — Python dependencies
+# Minimal install — only what seed.py needs at runtime.
+# ============================================================
+python-dotenv==1.0.1
+supabase==2.9.1

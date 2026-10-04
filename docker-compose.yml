@@ -1,12 +1,24 @@
 # ============================================================
-# Waypoint — Docker Compose
+# Waypoint — Docker Compose  (Phase 9: full stack + seed)
+#
+# Services:
+#   api   — FastAPI backend (port 8000)
+#   web   — Vite SPA served by nginx (port 80 → localhost:3000)
+#   seed  — one-shot seed runner (exits after seeding)
 #
 # Usage:
-#   docker compose up          → start all services
-#   docker compose up --build  → rebuild images first
-#   docker compose down        → stop and remove containers
+#   docker compose up --build          → build all images, start all services
+#   docker compose up api              → backend only (for local frontend dev)
+#   docker compose run --rm seed       → re-run seed against an already-running api
+#   docker compose down                → stop and remove containers
+#   docker compose down -v             → also removes named volumes
 #
 # Required: copy .env.example → .env and fill in values before running.
+#
+# IMPORTANT — build args for the web image:
+#   The Vite build bakes env vars into the JS bundle at build time.
+#   Set VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, and VITE_API_BASE_URL
+#   in your .env (they are forwarded via build.args below).
 # ============================================================
 
 services:
@@ -23,8 +35,9 @@ services:
       - path: .env
         required: false
     environment:
-      - ENVIRONMENT=development
-    # Health check mirrors the Dockerfile HEALTHCHECK
+      ENVIRONMENT: development
+      # Override CORS to allow the containerised web frontend
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost:3001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -32,32 +45,67 @@ services:
       retries: 3
       start_period: 15s
     restart: unless-stopped
+    networks:
+      - waypoint
 
-  # ── Web Frontend ─────────────────────────────────────────────────────────
-  # Uncomment when the frontend team confirms their Dockerfile or build path.
-  # web:
-  #   build:
-  #     context: ./web          # or ./apps/web depending on final structure
-  #     dockerfile: Dockerfile
-  #   container_name: waypoint-web
-  #   ports:
-  #     - "5173:5173"
-  #   depends_on:
-  #     api:
-  #       condition: service_healthy
-  #   environment:
-  #     - VITE_API_URL=http://api:8000
+  # ── Web Console (Vite SPA → nginx) ───────────────────────────────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        # These are read from your root .env at build time and baked into
+        # the Vite JS bundle. They must be set before running `docker compose up --build`.
+        VITE_SUPABASE_URL: "${VITE_SUPABASE_URL:-}"
+        VITE_SUPABASE_ANON_KEY: "${VITE_SUPABASE_ANON_KEY:-}"
+        # Inside the Docker network the API is reachable at http://api:8000.
+        # The browser fetches from outside Docker → use localhost:8000 (the mapped port).
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:8000}"
+    container_name: waypoint-web
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - waypoint
 
-  # ── Seed runner (Phase 9) ─────────────────────────────────────────────────
-  # Runs once on startup to load competition datasets into Supabase.
-  # seed:
-  #   build:
-  #     context: ./scripts
-  #     dockerfile: Dockerfile.seed
-  #   container_name: waypoint-seed
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     api:
-  #       condition: service_healthy
-  #   restart: "no"
+  # ── Seed Runner ───────────────────────────────────────────────────────────
+  # Runs once after the API is healthy; exits cleanly (restart: "no").
+  # The seed script is fully idempotent — re-running is safe.
+  #
+  # CSV data: mount the host data/ directory into /data inside the container.
+  # If the CSVs aren't available, set SEED_SKIP_CSV=1 to skip them.
+  seed:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.seed
+    container_name: waypoint-seed
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Set SEED_SKIP_CSV=1 if the competition CSVs are not present in data/
+      SEED_SKIP_CSV: "${SEED_SKIP_CSV:-0}"
+      # Override the walkthrough date if needed (defaults to today in seed.py)
+      SEED_PLAN_DATE: "${SEED_PLAN_DATE:-}"
+      # Path inside the container where outlets.csv / vehicles.csv / calendar.csv live
+      SEED_DATA_DIR: "/data"
+    volumes:
+      # Mount the confidential CSV directory (gitignored) read-only
+      - type: bind
+        source: ./data
+        target: /data
+        read_only: true
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - waypoint
+
+# ── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  waypoint:
+    driver: bridge

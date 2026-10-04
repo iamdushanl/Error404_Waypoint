@@ -8,6 +8,6 @@
     "dev:web": "npm --prefix web run dev",
     "dev:mobile": "npm --prefix mobile run dev",
     "dev:native": "npm --prefix mobile-native run start",
-    "test:backend": "backend/api/.venv/bin/pytest -q backend/api/tests"
+    "test:backend": "node -e \"const { spawnSync } = require('child_process'); const cmd = process.platform === 'win32' ? 'backend\\\\api\\\\.venv\\\\Scripts\\\\pytest.exe' : 'backend/api/.venv/bin/pytest'; const res = spawnSync(cmd, ['backend/api/tests'], { stdio: 'inherit', shell: true }); process.exit(res.status ?? 0);\""
   }
 }

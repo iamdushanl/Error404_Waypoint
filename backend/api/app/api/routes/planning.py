@@ -82,11 +82,17 @@ async def generate_plan(
             dry_run=body.dry_run,
         )
     except ValueError as exc:
-        # Validation failure — plan was not persisted
-        log.error("Plan generation failed validation: %s", str(exc))
+        # Validation failure or duplicate plan conflict
+        log.error("Plan generation failed: %s", str(exc))
+        err_msg = str(exc)
+        status_code = (
+            status.HTTP_409_CONFLICT
+            if "already exists" in err_msg
+            else status.HTTP_422_UNPROCESSABLE_ENTITY
+        )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
+            status_code=status_code,
+            detail=err_msg,
         )
     except Exception as exc:
         log.exception("Unexpected error during plan generation")
@@ -196,7 +202,7 @@ async def get_plan(
         .maybe_single()
         .execute()
     )
-    if not plan_resp.data:
+    if not plan_resp or not plan_resp.data:
         raise HTTPException(status_code=404, detail="Plan not found.")
 
     # Trips with stops
@@ -245,7 +251,7 @@ async def confirm_plan(
         .maybe_single()
         .execute()
     )
-    if not plan_resp.data:
+    if not plan_resp or not plan_resp.data:
         raise HTTPException(status_code=404, detail="Plan not found.")
 
     plan = plan_resp.data

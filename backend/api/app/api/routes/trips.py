@@ -184,8 +184,13 @@ async def acknowledge_trip(
         raise HTTPException(status_code=404, detail="Trip not found.")
 
     updated = repo.acknowledge(trip_id, role=role)
+    if role == "loader" and trip.get("status") == "planned":
+        repo.update_status(trip_id, "loading")
+        if updated:
+            updated["status"] = "loading"
     log.info("Trip %s acknowledged by %s (%s)", trip_id, current_user["email"], role)
     return TripResponse(**updated)
+
 
 
 # ── PATCH /api/v1/trips/{id}/depart ──────────────────────────────────────────

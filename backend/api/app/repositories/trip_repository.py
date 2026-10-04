@@ -53,7 +53,7 @@ class TripRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     def get_with_stops(self, trip_id: str) -> dict | None:
         """Return trip + stops ordered by sequence_number."""
@@ -64,7 +64,7 @@ class TripRepository:
             .maybe_single()
             .execute()
         )
-        if resp.data:
+        if resp and resp.data:
             data = resp.data.copy()
             raw_stops = data.pop("trip_stops", [])
             # Sort stops by sequence_number

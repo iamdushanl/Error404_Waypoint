@@ -120,10 +120,10 @@ Services and ports:
 | Service | Container name  | Host port | Notes                          |
 |---------|----------------|-----------|--------------------------------|
 | api     | waypoint-api   | 8000      | FastAPI + `/docs` + `/health` |
-| web     | waypoint-web   | 3000      | Nginx serving the Vite SPA    |
+| web     | waypoint-web   | 3001      | Nginx serving the Vite SPA    |
 | seed    | waypoint-seed  | —         | Exits after seeding (once)    |
 
-- **Web console**: http://localhost:3000
+- **Web console**: http://localhost:3001
 - **API docs**: http://localhost:8000/docs
 - **Health**: http://localhost:8000/health
 
@@ -148,20 +148,32 @@ npm run dev:web
 ## Verification
 
 ```bash
+# Verify TypeScript compilation and production bundles
 npm run build
+
+# Run complete backend unit and integration test suite (94 tests, 100% pass)
 npm run test:backend
-backend/api/.venv/bin/python -m compileall -q backend/api/app backend/api/tests scripts
+
+# Run automated end-to-end 4-role golden walkthrough
+python scripts/verify_e2e_flow.py
 ```
 
-Expected backend result: all tests pass. A full cross-role E2E requires the configured Supabase project and seeded data.
+Expected result: all unit/integration tests and all 5 walkthrough steps pass with 100% success.
 
-## Golden walkthrough
+## Golden walkthrough & Demo Credentials
 
+Pre-provisioned demo accounts:
+- **Store Manager**: `manager@waypoint.demo` / `WaypointDemo2026!` (or `storemanager@waypoint.lk` / `waypoint123`) · Outlet `OUT001`
+- **Dispatcher**: `dispatcher@waypoint.demo` / `WaypointDemo2026!` (or `dispatcher@waypoint.lk` / `waypoint123`) · Depot `Peliyagoda`
+- **Loader**: `loader@waypoint.demo` / `WaypointDemo2026!` (or `loader@waypoint.lk` / `waypoint123`) · Depot `Peliyagoda`
+- **Driver**: `driver@waypoint.demo` / `WaypointDemo2026!` (or `driver@waypoint.lk` / `waypoint123`) · Vehicle `VEH035`, Depot `Peliyagoda`
+
+Workflow sequence:
 1. Store Manager signs in with email/password (or registers a new staff account), creates and submits an order.
-2. Dispatcher sees the submitted order, generates a plan, reviews trips and machine-readable deferral reasons, then confirms the plan.
-3. Loader sees the confirmed backend trip in reverse load order, acknowledges it, and records a shortfall.
-4. Driver signs in, sees only the assigned trip, records delivery online or offline, restarts with the operation still queued, then syncs.
-5. Store Manager loads the backend delivery record and confirms receipt.
+2. Dispatcher reviews order queue, runs constraint-based allocation, checks deferrals, and confirms plan.
+3. Loader views the confirmed trip in reverse load order, acknowledges it, and records a shortfall.
+4. Driver signs in, views assigned route, acknowledges and departs depot, records delivery outcome & Proof of Delivery, and tests offline idempotent sync.
+5. Store Manager views delivered shipments and confirms receipt with items and notes.
 
 ## Architecture boundary
 

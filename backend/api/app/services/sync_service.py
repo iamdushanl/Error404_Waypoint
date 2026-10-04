@@ -281,7 +281,7 @@ class SyncService:
             .maybe_single()
             .execute()
         )
-        if not stop_resp.data:
+        if not stop_resp or not stop_resp.data:
             raise _SyncValidationError(
                 f"[{op.operation_id}] Trip stop '{trip_stop_id}' not found."
             )

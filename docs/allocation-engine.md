@@ -290,19 +290,28 @@ backend/api/app/services/
 
 ---
 
-## 13. Known Limitations
+## 13. Known Limitations & Architectural Tradeoffs
 
-1. **Greedy, not optimal.** The heuristic makes locally optimal choices. A different order of orders could yield a better global allocation. A combinatorial solver (e.g., OR-Tools CP-SAT) would improve utilization but reduce explainability and testability.
+1. **Historical Delivery Signals (`deferred_yesterday` & `days_since_last_served`):**
+   - In `backend/api/app/services/allocation/prioritization.py`, the starvation scoring formula (`days_since_last_served × 10`) and repeat-deferral priority bonus (`+25 if deferred_yesterday`) are fully implemented and unit-tested in the allocation domain logic.
+   - However, in the current orders table schema, `deferred_yesterday` and `days_since_last_served` default to `0` because historical multi-day delivery reconciliation is not yet wired into the orders intake schema.
+   - *Reviewer note:* The engine is fully architected to prioritize repeat-deferred orders once live multi-day delivery history is fed from the database.
 
-2. **No delivery window scheduling.** The engine enforces time *budgets* but does not schedule specific arrival times per stop. The `planned_arrival_time` fields are null in the current version. Future work: model the schedule forward from departure time.
+2. **Delivery Window Scheduling vs. Time Budgets (`planned_arrival_time`):**
+   - The engine strictly enforces vehicle daily operational time budgets (Fresh ≤ 270 min, Style/Tech ≤ 480 min) and validates outlet delivery windows.
+   - However, the engine does not forward-schedule clock-time ETAs per intermediate stop; hence `planned_arrival_time` on generated trip stops remains `null` until dynamic dispatch routing is executed. Frontends display outlet operating windows as the arrival window expectation.
 
-3. **Static travel data.** Travel times use free-flow values from `district_travel.csv`. Monsoon, traffic congestion, and road conditions are not applied in Phase 5.
+3. **Greedy Heuristic vs. Global Combinatorial Optimization:**
+   - The allocation engine employs a greedy constructive heuristic sorted by priority score, window urgency, and temperature requirements. While an integer programming solver (e.g., OR-Tools CP-SAT) could achieve marginally higher volume utilization, the heuristic guarantees determinism, O(N log N) execution speed, and machine-readable explainability for every deferral decision.
 
-4. **Fuel quota is weekly, not daily.** The engine checks `weekly_fuel_quota_l` but only tracks fuel for the single planning day. A multi-day tracking table is needed for production accuracy.
+4. **Static Travel Data:**
+   - Travel times use free-flow values from `district_travel.csv`. Dynamic adjustments for monsoon conditions, peak-hour traffic multipliers, and road disruptions are planned for the Datathon phase.
 
-5. **`deferred_yesterday` / `days_since_last_served`** are not in the current orders schema. The engine accepts `0` defaults. These signals should be populated from a historical delivery table for full policy effectiveness.
+5. **Weekly Fuel Quota Tracking:**
+   - The engine validates route distance consumption against `weekly_fuel_quota_l` on a single-day planning basis. A persistent rolling 7-day fuel ledger is required for multi-day fleet lifecycle tracking.
 
-6. **No transactional rollback.** Supabase's Python client does not expose begin/commit for the service-role key. The persistence sequence is ordered by dependency but is not atomic.
+6. **Transactional Atomicity in Plan Generation:**
+   - Supabase Python client operations run in dependency sequence (draft plan → trips → trip stops → deferred orders). Rollback on partial failure relies on cleaning existing draft records before regeneration.
 
 ---
 

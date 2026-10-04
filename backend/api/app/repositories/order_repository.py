@@ -61,7 +61,7 @@ class OrderRepository:
             .maybe_single()
             .execute()
         )
-        return resp.data
+        return resp.data if resp else None
 
     def get_with_items(self, order_id: str) -> dict | None:
         """Return order + its line items in one query."""
@@ -72,7 +72,7 @@ class OrderRepository:
             .maybe_single()
             .execute()
         )
-        if resp.data:
+        if resp and resp.data:
             # Normalise the nested key
             data = resp.data.copy()
             data["items"] = data.pop("order_items", [])

@@ -114,10 +114,10 @@ Services and ports:
 | Service | Container name  | Host port | Notes                          |
 |---------|----------------|-----------|--------------------------------|
 | api     | waypoint-api   | 8000      | FastAPI + `/docs` + `/health` |
-| web     | waypoint-web   | 3000      | Nginx serving the Vite SPA    |
+| web     | waypoint-web   | 3001      | Nginx serving the Vite SPA    |
 | seed    | waypoint-seed  | —         | Exits after seeding (once)    |
 
-- **Web console**: http://localhost:3000
+- **Web console**: http://localhost:3001
 - **API docs**: http://localhost:8000/docs
 - **Health**: http://localhost:8000/health
 

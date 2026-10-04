@@ -4,7 +4,7 @@
 >
 > 🌐 **Live Deployed Web Console:** [https://error404-waypoint-beryl.vercel.app](https://error404-waypoint-beryl.vercel.app) *(or local `http://localhost:3000`)*<br />
 > 📱 **Live Deployed Driver Mobile:** [https://error404-waypoint-e6ki.vercel.app](https://error404-waypoint-e6ki.vercel.app) *(or local `http://localhost:5174`)*<br />
-> ⚡ **Live API Documentation (Swagger):** [https://waypoint-api.up.railway.app/docs](https://waypoint-api.up.railway.app/docs) *(or local `http://localhost:8000/docs`)*
+> ⚡ **Live API Documentation (Swagger):** [https://error404-waypoint.onrender.com/docs](https://error404-waypoint.onrender.com/docs) *(or local `http://localhost:8000/docs`)*
 
 ---
 

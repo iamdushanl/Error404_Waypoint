@@ -1,0 +1,49 @@
+# ============================================================
+# Waypoint Seed Runner — Dockerfile
+#
+# Runs scripts/seed.py once against the Supabase project.
+# This container is meant to be run once at startup (restart: "no").
+#
+# The seed script is idempotent (uses upsert) — re-running is safe.
+#
+# Required environment variables (from root .env):
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#
+# Optional:
+#   SEED_DATA_DIR   — path inside container to CSV data directory
+#                     (default: /data — mount host data/ there)
+#   SEED_PLAN_DATE  — walkthrough date for sample orders (YYYY-MM-DD)
+#   SEED_SKIP_CSV   — set to "1" to skip CSV seeding (no data/ needed)
+# ============================================================
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install seed-script dependencies (subset of backend requirements)
+# python-dotenv and supabase are the only runtime deps needed here.
+COPY requirements.seed.txt ./requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Copy the seed script
+COPY seed.py ./seed.py
+
+# /data is the expected mount point for confidential CSV files
+VOLUME ["/data"]
+
+# Entrypoint: run the seed script.
+# SEED_DATA_DIR, SEED_SKIP_CSV, and SEED_PLAN_DATE are read by the shell wrapper.
+CMD ["/bin/sh", "-c", "\
+    SKIP_CSV_FLAG=\"\"; \
+    if [ \"${SEED_SKIP_CSV}\" = \"1\" ]; then SKIP_CSV_FLAG=\"--skip-csv\"; fi; \
+    PLAN_DATE_ARG=\"\"; \
+    if [ -n \"${SEED_PLAN_DATE}\" ]; then PLAN_DATE_ARG=\"--plan-date ${SEED_PLAN_DATE}\"; fi; \
+    DATA_DIR_ARG=\"\"; \
+    if [ -n \"${SEED_DATA_DIR}\" ]; then DATA_DIR_ARG=\"--data-dir ${SEED_DATA_DIR}\"; else DATA_DIR_ARG=\"--data-dir /data\"; fi; \
+    python seed.py $SKIP_CSV_FLAG $PLAN_DATE_ARG $DATA_DIR_ARG \
+"]
